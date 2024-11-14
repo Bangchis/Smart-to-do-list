@@ -1,7 +1,9 @@
 package com.smarttodo.user;
 
 import java.util.Date;
-//import java.util.List;
+import java.util.List;
+import com.smarttodo.task.Task;
+
 
 public class User {
     private int userID;
@@ -11,7 +13,7 @@ public class User {
     private int phoneNumber;
     private int gender;
     private Date dateOfBirth;
-//    private List<Task> assignedTasks;
+    private List<Task> assignedTasks;
 
     // Constructor
     public User(int userID, String username, String email, String password, int phoneNumber, int gender, Date dateOfBirth) {
@@ -24,6 +26,7 @@ public class User {
         this.dateOfBirth = dateOfBirth;
     }
 
+    
     // Getters and Setters
     public int getUserID() {
         return userID;
