@@ -11,7 +11,7 @@
         <artifactId>firebase-admin</artifactId>
         <version>9.4.1</version> <!-- Cập nhật phiên bản mới nhất tương thích -->
     </dependency>
-
+   
     <!-- Google Auth Library -->
     <dependency>
         <groupId>com.google.auth</groupId>
@@ -54,3 +54,27 @@
   </build>
 </project>
 
+=======
+    <!-- Firebase Authentication -->
+     <!-- Firebase Admin SDK -->
+     <dependency>
+    <groupId>javax.servlet</groupId>
+    <artifactId>servlet-api</artifactId>
+    <version>3.1.0</version>
+    <scope>provided</scope>
+</dependency>
+
+    <dependency>
+        <groupId>com.google.firebase</groupId>
+        <artifactId>firebase-admin</artifactId>
+        <version>9.0.0</version>
+    </dependency>
+    <!-- Firebase Authentication SDK -->
+    <dependency>
+        <groupId>com.google.firebase</groupId>
+        <artifactId>firebase-auth</artifactId>
+        <version>9.0.0</version>
+    </dependency>
+</dependencies>
+
+</project>
