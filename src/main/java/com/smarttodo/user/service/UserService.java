@@ -32,21 +32,12 @@ public class UserService {
         if (document.exists()) {
             Map<String, Object> userDetails = document.getData();
     
-            // Chuyển đổi birthday từ Timestamp về Date nếu cần
-            if (userDetails.containsKey("birthday")) {
-                Object birthdayValue = userDetails.get("birthday");
-                if (birthdayValue instanceof Timestamp) {
-                    Timestamp timestamp = (Timestamp) birthdayValue;
-                    Date birthday = timestamp.toDate();
-                    userDetails.put("birthday", birthday);
-                }
-            }
+            // Kiểm tra và in ra để xác minh dữ liệu
+            System.out.println("Fetched User Details: " + userDetails);
     
-            // Khởi tạo mặc định nếu các trường không tồn tại và đảm bảo kiểu dữ liệu chính xác
             if (!userDetails.containsKey("workspacesId") || userDetails.get("workspacesId") == null) {
-                userDetails.put("workspacesId", new ArrayList<String>());
+                userDetails.put("workspacesId", new ArrayList<>());
             } else {
-                // Chuyển đổi sang List<String> nếu cần thiết
                 List<Object> workspaceIds = (List<Object>) userDetails.get("workspacesId");
                 List<String> workspaceIdStrings = new ArrayList<>();
                 for (Object id : workspaceIds) {
@@ -56,9 +47,8 @@ public class UserService {
             }
     
             if (!userDetails.containsKey("reminderIds") || userDetails.get("reminderIds") == null) {
-                userDetails.put("reminderIds", new ArrayList<String>());
+                userDetails.put("reminderIds", new ArrayList<>());
             } else {
-                // Chuyển đổi sang List<String> nếu cần thiết
                 List<Object> reminderIds = (List<Object>) userDetails.get("reminderIds");
                 List<String> reminderIdStrings = new ArrayList<>();
                 for (Object id : reminderIds) {
@@ -68,18 +58,15 @@ public class UserService {
             }
     
             if (!userDetails.containsKey("assignedTasks") || userDetails.get("assignedTasks") == null) {
-                userDetails.put("assignedTasks", new ArrayList<Task>());
-            } else {
-                // Nếu `assignedTasks` là một danh sách, có thể bạn cần xử lý chuyển đổi kiểu ở đây.
-                // Đây là trường hợp phức tạp vì cần chuyển từ dữ liệu Firestore sang đối tượng Task.
-                // Để đơn giản, chúng ta có thể để lại như cũ nếu bạn chưa có logic cụ thể để chuyển đổi.
+                userDetails.put("assignedTasks", new ArrayList<>());
             }
-            
+    
             return userDetails;
         } else {
             throw new Exception("User not found in Firestore");
         }
     }
+    
 
     public static void setCurrentUser(User user) {
         currentUser = user;
@@ -89,55 +76,40 @@ public class UserService {
     
 
 
-
     public String loginUser(String email, String password) throws Exception { 
-        // Đăng nhập người dùng bằng Firebase Authentication
         String userId = FirebaseAuthentication.loginUser(email, password);
         
         if (userId != null) {
             // Fetch dữ liệu người dùng từ Firestore để tạo đối tượng User
             Map<String, Object> userDetails = getUserDetails(userId);
     
-            // Extract all details needed for creating a User instance
-            String username = (String) userDetails.get("username");
-            String fetchedPassword = password; // Không cần fetch mật khẩu từ Firestore vì nó đã có từ đăng nhập
-            String emailFetched = (String) userDetails.get("email");
-            String birthday = (String) userDetails.get("birthday");
-            int gender = ((Long) userDetails.get("gender")).intValue();
-            String phoneNumber = (String) userDetails.get("phoneNumber");
-    
-            // Thêm việc kiểm tra nếu workspacesId có tồn tại trong userDetails
-            List<String> workspacesID = userDetails.containsKey("workspacesId") ? 
-                                        (List<String>) userDetails.get("workspacesId") : new ArrayList<>();
-    
-            // Thêm việc kiểm tra nếu assignedTasks có tồn tại trong userDetails
-            List<Task> assignedTasks = userDetails.containsKey("assignedTasks") ? 
-                                        (List<Task>) userDetails.get("assignedTasks") : new ArrayList<>();
-                                        
-            List<String> reminderIds = userDetails.containsKey("reminderIds") ? 
-                                        (List<String>) userDetails.get("reminderIds") : new ArrayList<>();
-    
             // Create User instance
             User user = createUserinstance(
                 userId,
-                username,
-                emailFetched,
-                fetchedPassword,
-                birthday,
-                gender,
-                phoneNumber,
-                assignedTasks,
-                workspacesID,
-                reminderIds
+                (String) userDetails.get("username"),
+                (String) userDetails.get("email"),
+                password,
+                (String) userDetails.get("birthday"),
+                ((Long) userDetails.get("gender")).intValue(),
+                (String) userDetails.get("phoneNumber"),
+                userDetails.containsKey("assignedTasks") ? (List<Task>) userDetails.get("assignedTasks") : new ArrayList<>(),
+                userDetails.containsKey("workspacesId") ? (List<String>) userDetails.get("workspacesId") : new ArrayList<>(),
+                userDetails.containsKey("reminderIds") ? (List<String>) userDetails.get("reminderIds") : new ArrayList<>()
             );
     
-            // Save user instance as current user
-            currentUser = user;
+            // Gán giá trị cho currentUser
+            UserService.setCurrentUser(user);
+            System.out.println("After creating User instance:\nReminderIds: " + user.getReminderIds());
+    
             return userId;
         } else {
             throw new Exception("Login failed: Invalid credentials");
         }
     }
+    
+    
+    
+    
     
 
 
@@ -153,40 +125,27 @@ public class UserService {
         return currentUser != null;
     }
 
-    // Method to get the current user instance
     public static User getCurrentUser() {
         if (currentUser != null) {
             System.out.println("Current User Details:");
             System.out.println("UserID: " + currentUser.getUserId());
             System.out.println("Username: " + currentUser.getUsername());
-            System.out.println("Email: " + currentUser.getEmail());
-            System.out.println("PhoneNumber: " + currentUser.getPhoneNumber());
-            // Add any other information you want to print here
+            System.out.println("WorkspacesId: " + currentUser.getWorkspacesId()); // Kiểm tra xem workspacesId đã được cập nhật chưa
         } else {
             System.out.println("No user is currently logged in.");
         }
         return currentUser;
     }
-
     
 
-
     // Method to create a User instance
-public static User createUserinstance(String userId, String username, String email, String password, String birthday, int gender, String phoneNumber, List<Task> assignedTasks, List<String> workspacesId, List<String> reminderIds) {
-    // Kiểm tra và khởi tạo danh sách nếu null
-    if (assignedTasks == null) {
-        assignedTasks = new ArrayList<>();
+    public static User createUserinstance(String userId, String username, String email, String password, String birthday, int gender, String phoneNumber, List<Task> assignedTasks, List<String> workspacesID, List<String> reminderIds) {
+        // Debug: in ra workspacesID để chắc chắn nó có giá trị trước khi truyền vào constructor
+        System.out.println("WorkspacesID before creating instance: " + workspacesID);
+    
+        return new User(userId, username, email, password, birthday, gender, phoneNumber, assignedTasks, workspacesID, reminderIds);
     }
-    if (workspacesId == null) {
-        workspacesId = new ArrayList<>();
-    }
-    if (reminderIds == null) {
-        reminderIds = new ArrayList<>();
-    }
-
-    return new User(userId, username, email, password, birthday, gender, phoneNumber, assignedTasks, workspacesId, reminderIds);
-}
-
+    
 
 
     public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate) {
