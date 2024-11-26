@@ -8,6 +8,7 @@ import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import com.smarttodo.reminder.model.Reminder;
 import com.smarttodo.task.model.Task;
+import com.smarttodo.user.service.UserService;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,7 +30,7 @@ public class User {
     protected List<String> reminderIds;
 
     // Constructors
-    public User(String userId, String username, String email, String password, String birthday, int gender, String phoneNumber, List<Task> assignedTasks, List<String> workspacesId, List<String> reminderIds) {
+    public User(String userId, String username, String email, String password, String birthday, int gender, String phoneNumber, List<Task> assignedTasks, List<String> workspacesID, List<String> reminderIds) {
         this.userId = userId;
         this.username = username;
         this.email = email;
@@ -38,9 +39,17 @@ public class User {
         this.gender = gender;
         this.phoneNumber = phoneNumber;
         this.assignedTasks = assignedTasks;
-        this.workspacesId = workspacesId != null ? reminderIds : new ArrayList<>();
-        this.reminderIds = reminderIds != null ? reminderIds : new ArrayList<>();
+    
+        // Kiểm tra và gán workspacesId
+        if (workspacesID != null) {
+            this.workspacesId = new ArrayList<>(workspacesID); // Đảm bảo copy đúng giá trị, tránh thay đổi không mong muốn
+        } else {
+            this.workspacesId = new ArrayList<>();
+        }
+    
+        this.reminderIds = reminderIds != null ? new ArrayList<>(reminderIds) : new ArrayList<>();
     }
+    
 
     
     // Getters and Setters
@@ -134,7 +143,6 @@ public class User {
             String reminderId = UUID.randomUUID().toString();
             reminder.setReminderID(reminderId);
             
-            
             // Create reminder details map
             Map<String, Object> reminderDetails = new HashMap<>();
             reminderDetails.put("reminderID", reminder.getReminderID());
@@ -143,25 +151,26 @@ public class User {
             reminderDetails.put("dueDate", reminder.getDueDate().toString());
             reminderDetails.put("user", reminder.getUser().getUserId());
             
-            
             // Add reminder to Firestore sub-collection
             DocumentReference userDocRef = db.collection("User").document(this.userId);
             ApiFuture<WriteResult> future = userDocRef.collection("reminders").document(reminderId).set(reminderDetails);
             future.get(); // Wait for the operation to complete
     
-            // Update reminderIds list in Firestore
-            Map<String, Object> updateData = new HashMap<>();
-            updateData.put("reminderIds", this.reminderIds);
-            userDocRef.update(updateData).get();
             // Add reminderId to user's reminderIds list
             this.reminderIds.add(reminderId);
     
+            // Update reminderIds list in Firestore
+            Map<String, Object> updateData = new HashMap<>();
+            updateData.put("reminderIds", this.reminderIds);
+            userDocRef.update(updateData).get(); // Lưu lại thay đổi vào Firestore
+    
+            // Update currentUser
+            UserService.setCurrentUser(this);
+            System.out.println("Updated currentUser with new reminderIds: " + this.reminderIds);
             
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        
     }
     
     public void addWorkspacesId(String workspaceId) {
@@ -179,6 +188,10 @@ public class User {
                     Map<String, Object> updateData = new HashMap<>();
                     updateData.put("workspacesId", this.workspacesId);
                     userDocRef.update(updateData).get(); // Lưu lại thay đổi vào Firestore
+    
+                    // Cập nhật currentUser
+                    UserService.setCurrentUser(this);
+                    System.out.println("Updated currentUser with new workspacesId: " + this.workspacesId);
                 } catch (Exception e) {
                     System.err.println("Error updating workspacesId list: " + e.getMessage());
                     e.printStackTrace();
@@ -191,32 +204,33 @@ public class User {
     
 
     
-    public void createnewWorkspace(String workspaceId, String name, String description) {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-    
-            // Create workspace details map
-            Map<String, Object> workspaceDetails = new HashMap<>();
-            workspaceDetails.put("workspaceID", workspaceId);
-            workspaceDetails.put("name", name);
-            workspaceDetails.put("description", description);
-            workspaceDetails.put("ownerId", this.userId);
-            workspaceDetails.put("collaboratorIds", new ArrayList<String>());
-            workspaceDetails.put("taskIds", new ArrayList<String>());
-    
-            // Add workspace to Firestore collection
-            DocumentReference workspaceDocRef = db.collection("Workspace").document(workspaceId);
-            ApiFuture<WriteResult> future = workspaceDocRef.set(workspaceDetails);
-            future.get(); // Wait for the operation to complete
-    
-            // Add workspaceId to user's workspacesId list and update Firestore
-            addWorkspacesId(workspaceId);
-    
-        } catch (Exception e) {
-            System.err.println("Error while creating workspace: " + e.getMessage());
-            e.printStackTrace();
-        }
+
+public void createnewWorkspace(String workspaceId, String name, String description) {
+    try {
+        Firestore db = FirestoreClient.getFirestore();
+
+        // Create workspace details map
+        Map<String, Object> workspaceDetails = new HashMap<>();
+        workspaceDetails.put("workspaceID", workspaceId);
+        workspaceDetails.put("name", name);
+        workspaceDetails.put("description", description);
+        workspaceDetails.put("ownerId", this.userId);
+        workspaceDetails.put("collaboratorIds", new ArrayList<String>());
+        workspaceDetails.put("taskIds", new ArrayList<String>());
+
+        // Add workspace to Firestore collection
+        DocumentReference workspaceDocRef = db.collection("Workspace").document(workspaceId);
+        ApiFuture<WriteResult> future = workspaceDocRef.set(workspaceDetails);
+        future.get(); // Wait for the operation to complete
+
+        // Add workspaceId to user's workspacesId list and update Firestore
+        addWorkspacesId(workspaceId);
+
+    } catch (Exception e) {
+        System.err.println("Error while creating workspace: " + e.getMessage());
+        e.printStackTrace();
     }
-    
+}
+
 
 }

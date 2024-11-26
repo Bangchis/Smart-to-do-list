@@ -266,12 +266,15 @@ class HomePage extends JFrame {
 
         logoutButton = new JButton("Logout");
         logoutButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                new LoginPage();
-                dispose();
-            }
-        });
+        @Override
+        public void actionPerformed(ActionEvent e) {
+        // Save any necessary user data or state before logging out
+            UserService.setCurrentUser(null); // Clear current user instance
+            new LoginPage();
+            dispose();
+    }
+});
+
 
         addReminderButton = new JButton("Add Reminder");
         addReminderButton.addActionListener(new ActionListener() {
