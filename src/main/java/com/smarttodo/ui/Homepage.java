@@ -1,32 +1,54 @@
 package com.smarttodo.ui;
 
 import javax.swing.*;
+
+import com.smarttodo.firebase.FirebaseConfig;
+import com.smarttodo.user.model.User;
+
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.util.ArrayList;
 
 public class Homepage extends JFrame {
 
-    public Homepage() {
+    private JPanel sidebarPanel;  // Make sidebarPanel a member variable to access later
+    private User currentUser; // Store the user object
+
+    public Homepage(User user) {
+
+        FirebaseConfig.initializeFirebase();
+        this.currentUser = user;
         // Frame settings
         setTitle("Client Dashboard");
-        setSize(1000, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Correct usage
         setLocationRelativeTo(null); // Center the frame
+
+        // Get the screen size (width and height)
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int screenWidth = screenSize.width;
+        int screenHeight = screenSize.height;
+
+        // Set the frame to full screen (maximized)
+        setSize(screenWidth, screenHeight);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Main layout for the frame
         setLayout(new BorderLayout());
 
         // Left sidebar panel
-        JPanel sidebarPanel = new JPanel();
-        sidebarPanel.setPreferredSize(new Dimension(250, getHeight()));
-        sidebarPanel.setBackground(new Color(40, 40, 40));
+        sidebarPanel = new JPanel();
         sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
+        sidebarPanel.setBackground(new Color(40, 40, 40));
 
-        // Profile section
-        JLabel profileLabel = new JLabel("Nguyen Thanh Binh", JLabel.CENTER);
+        // Add profile section
+        // Profile label showing the current user's username
+        JLabel profileLabel = new JLabel(currentUser.getUsername(), JLabel.CENTER);  // Use the username from the currentUser object
         profileLabel.setForeground(Color.WHITE);
         profileLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         profileLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         sidebarPanel.add(profileLabel);
+
 
         // Sidebar buttons
         String[] sidebarOptions = {"Search", "Smart Assistant", "Home", "Inbox"};
@@ -68,7 +90,7 @@ public class Homepage extends JFrame {
 
         // Workspace buttons panel
         JPanel workspaceButtonsPanel = new JPanel();
-        workspaceButtonsPanel.setLayout(new GridLayout(2, 3, 20, 20)); // 2 hàng, 3 cột
+        workspaceButtonsPanel.setLayout(new GridLayout(2, 3, 20, 20)); // 2 rows, 3 columns
         workspaceButtonsPanel.setBackground(new Color(30, 30, 30));
         
         // Add colored workspace buttons
@@ -101,6 +123,17 @@ public class Homepage extends JFrame {
         // Add panels to the main frame
         add(sidebarPanel, BorderLayout.WEST);
         add(mainPanel, BorderLayout.CENTER);
+
+        // Add a component listener to handle window resizing
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateSidebarWidth();
+            }
+        });
+
+        // Initial sidebar width update
+        updateSidebarWidth();
     }
 
     // Method to create a styled button for the sidebar
@@ -116,10 +149,22 @@ public class Homepage extends JFrame {
         return button;
     }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            Homepage ui = new Homepage();
-            ui.setVisible(true);
-        });
+    // Update the sidebar width based on the current window width
+    private void updateSidebarWidth() {
+        int newWidth = getWidth() / 6; // Sidebar width is 1/6th of the window width
+        sidebarPanel.setPreferredSize(new Dimension(newWidth, getHeight())); // Adjust height to window height
+        revalidate(); // Revalidate the layout to update the sidebar size
     }
+
+    public static void main(String[] args) {
+    SwingUtilities.invokeLater(() -> {
+        // Dummy User object for testing purposes
+        User testUser = new User("userId123", "Nguyen Thanh Lam", "test@example.com", "password", "1990-01-01", 1, "1234567890", new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+        
+        // Create and show the homepage with the dummy user
+        Homepage ui = new Homepage(testUser);
+        ui.setVisible(true);
+    });
+}
+
 }

@@ -9,6 +9,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import com.smarttodo.firebase.service.FirebaseAuthentication;
 import com.smarttodo.firebase.FirebaseConfig;
+import com.smarttodo.user.model.User;
+import com.smarttodo.user.service.UserService;
 
 public class LoginForm extends JFrame {
 
@@ -115,12 +117,20 @@ public class LoginForm extends JFrame {
                         String userId = FirebaseAuthentication.loginUser(username, password);
 
                         if (userId != null) {
-                            // Successful login
-                            JOptionPane.showMessageDialog(null, "Login successful! Welcome!");
+                            // Fetch user data
+                            User userData = UserService.getUserData(userId);
 
-                            // Open homepage after successful login
-                            new Homepage().setVisible(true);
-                            dispose(); // Close the login form
+                            if (userData != null) {
+                                // Successful login and user data fetched
+                                JOptionPane.showMessageDialog(null, "Login successful! Welcome!");
+
+                                // Open homepage and pass user data
+                                new Homepage(userData).setVisible(true);
+                                dispose(); // Close the login form
+                            } else {
+                                // If user data not found
+                                JOptionPane.showMessageDialog(null, "Failed to fetch user data.");
+                            }
                         } else {
                             // If login fails
                             JOptionPane.showMessageDialog(null, "Invalid username or password.");
@@ -133,6 +143,7 @@ public class LoginForm extends JFrame {
                 }
             }
         });
+        
     }
 
     public static void main(String[] args) {

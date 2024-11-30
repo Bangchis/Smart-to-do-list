@@ -7,15 +7,23 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.smarttodo.firebase.FirebaseConfig;
 import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.task.model.Task;
+import com.smarttodo.user.model.User;
+import com.smarttodo.user.service.UserService;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.List;  // For generic List
+
 
 public class rf extends JFrame {
 
@@ -187,7 +195,27 @@ if (userId != null) {
             System.out.println("User logged in successfully with ID: " + loginUserId);
             JOptionPane.showMessageDialog(null, "Login successful. Welcome to the Homepage!");
 
-            new Homepage().setVisible(true);  // Open the homepage
+            // Fetch user details from Firestore (or another source)
+            Map<String, Object> userDetails = UserService.getUserDetails(loginUserId);
+            
+            // Create User instance with the fetched data
+            User loggedInUser = new User(
+                loginUserId,
+                (String) userDetails.get("username"),
+                (String) userDetails.get("email"),
+                password,  // You should securely handle the password
+                (String) userDetails.get("birthday"),
+                ((Long) userDetails.get("gender")).intValue(),
+                (String) userDetails.get("phoneNumber"),
+                (List<Task>) userDetails.getOrDefault("assignedTasks", new ArrayList<>()),
+                (List<String>) userDetails.getOrDefault("workspacesId", new ArrayList<>()),
+                (List<String>) userDetails.getOrDefault("reminderIds", new ArrayList<>())
+            );
+            
+            // Open the homepage and pass the User object
+            Homepage ui = new Homepage(loggedInUser);  // Pass User object
+            ui.setVisible(true);
+            
             dispose(); // Close the login form
         } else {
             // If login fails, show an error message

@@ -163,6 +163,26 @@ public class UserService {
         
         return new Workspace( workspaceId, name, description, currentUser.getUserId());
     }
+
+    public static User getUserData(String userId) throws Exception {
+        // Fetch user details from Firestore
+        Map<String, Object> userDetails = getUserDetails(userId);
+    
+        // Create User instance from fetched details
+        return createUserinstance(
+            userId,
+            (String) userDetails.get("username"),
+            (String) userDetails.get("email"),
+            (String) userDetails.get("password"), // Password handling needs to be secured
+            (String) userDetails.get("birthday"),
+            ((Long) userDetails.get("gender")).intValue(),
+            (String) userDetails.get("phoneNumber"),
+            userDetails.containsKey("assignedTasks") ? (List<Task>) userDetails.get("assignedTasks") : new ArrayList<>(),
+            userDetails.containsKey("workspacesId") ? (List<String>) userDetails.get("workspacesId") : new ArrayList<>(),
+            userDetails.containsKey("reminderIds") ? (List<String>) userDetails.get("reminderIds") : new ArrayList<>()
+        );
+    }
+    
    
     
 }
