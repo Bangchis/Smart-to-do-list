@@ -1,10 +1,9 @@
 package com.smarttodo.ui;
 
-import javax.swing.*;
-
 import com.smarttodo.firebase.FirebaseConfig;
 import com.smarttodo.user.model.User;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -12,17 +11,16 @@ import java.util.ArrayList;
 
 public class Homepage extends JFrame {
 
-    private JPanel sidebarPanel;  // Make sidebarPanel a member variable to access later
-    private User currentUser; // Store the user object
+    private User currentUser;
 
     public Homepage(User user) {
-
         FirebaseConfig.initializeFirebase();
         this.currentUser = user;
+
         // Frame settings
         setTitle("Client Dashboard");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Correct usage
-        setLocationRelativeTo(null); // Center the frame
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
 
         // Get the screen size (width and height)
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -36,92 +34,86 @@ public class Homepage extends JFrame {
         // Main layout for the frame
         setLayout(new BorderLayout());
 
-        // Left sidebar panel
-        sidebarPanel = new JPanel();
-        sidebarPanel.setLayout(new BoxLayout(sidebarPanel, BoxLayout.Y_AXIS));
-        sidebarPanel.setBackground(new Color(40, 40, 40));
-
-        // Add profile section
-        // Profile label showing the current user's username
-        JLabel profileLabel = new JLabel(currentUser.getUsername(), JLabel.CENTER);  // Use the username from the currentUser object
-        profileLabel.setForeground(Color.WHITE);
-        profileLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        profileLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
-        sidebarPanel.add(profileLabel);
-
-
-        // Sidebar buttons
-        String[] sidebarOptions = {"Search", "Smart Assistant", "Home", "Inbox"};
-        for (String option : sidebarOptions) {
-            JButton button = createSidebarButton(option);
-            sidebarPanel.add(button);
-        }
-
-        // Workspaces label
-        JLabel workspacesLabel = new JLabel("My Workspaces");
-        workspacesLabel.setForeground(Color.WHITE);
-        workspacesLabel.setBorder(BorderFactory.createEmptyBorder(20, 10, 10, 10));
-        sidebarPanel.add(workspacesLabel);
-
-        // Workspace options
-        String[] workspaces = {"Work1", "Work2", "Work3", "Work4", "Work5", "Work6"};
-        for (String workspace : workspaces) {
-            JButton workspaceButton = createSidebarButton(workspace);
-            sidebarPanel.add(workspaceButton);
-        }
-
-        // More options at the bottom
-        sidebarPanel.add(Box.createVerticalGlue()); // Push remaining buttons to the bottom
-        String[] moreOptions = {"Calendar", "Settings", "Create a workspace", "Logout"};
-        for (String option : moreOptions) {
-            JButton button = createSidebarButton(option);
-            sidebarPanel.add(button);
-        }
+        // Left sidebar panel (using Sidebar class)
+        Sidebar sidebar = new Sidebar(currentUser);
+        add(sidebar, BorderLayout.WEST);
 
         // Right main panel
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(new Color(30, 30, 30));
 
         // Welcome label
-        JLabel welcomeLabel = new JLabel("Welcome, Nguyen Thanh Binh", JLabel.CENTER);
+        JLabel welcomeLabel = new JLabel("Welcome, " + currentUser.getUsername(), JLabel.CENTER);
         welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         welcomeLabel.setForeground(Color.WHITE);
         mainPanel.add(welcomeLabel, BorderLayout.NORTH);
 
-        // Workspace buttons panel
-        JPanel workspaceButtonsPanel = new JPanel();
-        workspaceButtonsPanel.setLayout(new GridLayout(2, 3, 20, 20)); // 2 rows, 3 columns
-        workspaceButtonsPanel.setBackground(new Color(30, 30, 30));
-        
-        // Add colored workspace buttons
+        // Reminders panel
+        JPanel remindersPanel = new JPanel();
+        remindersPanel.setLayout(new BoxLayout(remindersPanel, BoxLayout.Y_AXIS)); // Stack vertically
+        remindersPanel.setBackground(new Color(30, 30, 30));
+
+        // Add heading "Reminders"
+        JLabel remindersHeading = new JLabel("Reminders");
+        remindersHeading.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        remindersHeading.setForeground(Color.WHITE);
+        remindersHeading.setBorder(BorderFactory.createEmptyBorder(20, 10, 10, 10)); // Margin for the heading
+        remindersPanel.add(remindersHeading);
+
+        // Container for the scrollable part of the reminders
+        JPanel scrollableContainer = new JPanel();
+        scrollableContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20)); // Align buttons to center
+        scrollableContainer.setBackground(new Color(30, 30, 30));
+
+        // Remove any border from the reminders panel (if set)
+        remindersPanel.setBorder(null);
+
+        // Add reminder buttons (total 5 reminders)
         Color[] colors = {
             new Color(70, 130, 180), // Steel Blue
             new Color(220, 20, 60),  // Crimson
             new Color(128, 0, 128),  // Purple
             new Color(255, 215, 0),  // Gold
-            new Color(0, 128, 0),    // Green
-            new Color(255, 69, 0)    // Orange Red
+            new Color(0, 128, 0)     // Green
         };
-        for (int i = 0; i < 6; i++) {
-            JButton workspaceButton = new JButton("Work" + (i + 1));
-            workspaceButton.setPreferredSize(new Dimension(100, 100));
-            workspaceButton.setBackground(colors[i]);
-            workspaceButton.setForeground(Color.WHITE);
-            workspaceButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
-            workspaceButton.setFocusPainted(false);
-            workspaceButtonsPanel.add(workspaceButton);
-        }
-        mainPanel.add(workspaceButtonsPanel, BorderLayout.CENTER);
 
-        // Calendar panel
-        JPanel calendarPanel = new JPanel();
-        calendarPanel.setPreferredSize(new Dimension(500, 300));
-        calendarPanel.setBackground(Color.WHITE);
-        calendarPanel.setBorder(BorderFactory.createTitledBorder("Calendar"));
+        // Create 5 reminder buttons
+        for (int i = 0; i < 5; i++) {
+            JButton reminderButton = new JButton("Reminder " + (i + 1));
+            reminderButton.setPreferredSize(new Dimension(120, 100)); // Size for each reminder button
+            reminderButton.setBackground(colors[i % colors.length]); // Cycle through colors
+            reminderButton.setForeground(Color.WHITE);
+            reminderButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+            reminderButton.setFocusPainted(false);
+            scrollableContainer.add(reminderButton);
+        }
+
+        // Set the preferred size of the scrollable container
+        // This will center the buttons by adjusting the container size based on button width
+        scrollableContainer.setPreferredSize(new Dimension(600, 120));  // 600px width to fit 5 buttons with 20px gaps
+
+        // Scroll panel for reminders (only horizontal scroll)
+        JScrollPane scrollPane = new JScrollPane(scrollableContainer,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,  // No vertical scrollbar
+                JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);  // Horizontal scrollbar always
+
+        // Apply the custom scroll bar UI
+        scrollPane.getHorizontalScrollBar().setUI(new ModernScrollBarUI());
+
+        remindersPanel.add(scrollPane);
+
+        // Set a fixed height for the reminders panel (height can be adjusted)
+        remindersPanel.setPreferredSize(new Dimension(800, 300));
+
+        // Add the reminders panel to the main panel
+        mainPanel.add(remindersPanel, BorderLayout.CENTER);
+
+        // Calendar panel: Replace with CalendarPanel from external class
+        CalendarPanel calendarPanel = new CalendarPanel();  // Using the CalendarPanel you created
+        calendarPanel.setPreferredSize(new Dimension(800, 550)); // Adjust the size of the calendar
         mainPanel.add(calendarPanel, BorderLayout.SOUTH);
 
         // Add panels to the main frame
-        add(sidebarPanel, BorderLayout.WEST);
         add(mainPanel, BorderLayout.CENTER);
 
         // Add a component listener to handle window resizing
@@ -136,35 +128,20 @@ public class Homepage extends JFrame {
         updateSidebarWidth();
     }
 
-    // Method to create a styled button for the sidebar
-    private JButton createSidebarButton(String text) {
-        JButton button = new JButton(text);
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button.setMaximumSize(new Dimension(200, 40));
-        button.setBackground(new Color(60, 60, 60));
-        button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        button.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        return button;
-    }
-
     // Update the sidebar width based on the current window width
     private void updateSidebarWidth() {
         int newWidth = getWidth() / 6; // Sidebar width is 1/6th of the window width
-        sidebarPanel.setPreferredSize(new Dimension(newWidth, getHeight())); // Adjust height to window height
         revalidate(); // Revalidate the layout to update the sidebar size
     }
 
     public static void main(String[] args) {
-    SwingUtilities.invokeLater(() -> {
-        // Dummy User object for testing purposes
-        User testUser = new User("userId123", "Nguyen Thanh Lam", "test@example.com", "password", "1990-01-01", 1, "1234567890", new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        
-        // Create and show the homepage with the dummy user
-        Homepage ui = new Homepage(testUser);
-        ui.setVisible(true);
-    });
-}
+        SwingUtilities.invokeLater(() -> {
+            // Dummy User object for testing purposes
+            User testUser = new User("userId123", "lamthanhz", "test@example.com", "password", "1990-01-01", 1, "1234567890", new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
 
+            // Create and show the homepage with the dummy user
+            Homepage ui = new Homepage(testUser);
+            ui.setVisible(true);
+        });
+    }
 }

@@ -149,8 +149,7 @@ public class UserService {
     
 
 
-    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate) {
-        User currentUser = getCurrentUser();
+    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate, User currentUser) {
         if (currentUser == null) {
             throw new IllegalStateException("No user is currently logged in.");
         }
@@ -158,6 +157,7 @@ public class UserService {
         return new Reminder(reminderID, taskID, recurrencePattern, dueDate, currentUser);
     
     }
+
 
     public static Workspace createWorkspaceInstance(String workspaceId, String name, String description) {
         

@@ -280,7 +280,7 @@ class HomePage extends JFrame {
         addReminderButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new AddReminderPage();
+                // new AddReminderPage();
                 dispose();
             }
         });
@@ -323,72 +323,72 @@ class HomePage extends JFrame {
 }
 
 
-class AddReminderPage extends JFrame {
-    private JTextField taskIDField, recurrencePatternField, dueDateField;
-    private JButton addReminderButton, backButton;
+// class AddReminderPage extends JFrame {
+//     private JTextField taskIDField, recurrencePatternField, dueDateField;
+//     private JButton addReminderButton, backButton;
 
-    public AddReminderPage() {
-        setTitle("Add Reminder");
-        setSize(400, 300);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new GridLayout(4, 2));
+//     public AddReminderPage() {
+//         setTitle("Add Reminder");
+//         setSize(400, 300);
+//         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//         setLayout(new GridLayout(4, 2));
 
-        JLabel taskIDLabel = new JLabel("Task ID:");
-        taskIDField = new JTextField();
+//         JLabel taskIDLabel = new JLabel("Task ID:");
+//         taskIDField = new JTextField();
 
-        JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
-        recurrencePatternField = new JTextField();
+//         JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
+//         recurrencePatternField = new JTextField();
 
-        JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
-        dueDateField = new JTextField();
+//         JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
+//         dueDateField = new JTextField();
 
-        addReminderButton = new JButton("Add Reminder");
-        addReminderButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    String taskID = taskIDField.getText();
-                    String recurrencePattern = recurrencePatternField.getText();
-                    String dueDateStr = dueDateField.getText();
-                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
+//         addReminderButton = new JButton("Add Reminder");
+//         addReminderButton.addActionListener(new ActionListener() {
+//             @Override
+//             public void actionPerformed(ActionEvent e) {
+//                 try {
+//                     String taskID = taskIDField.getText();
+//                     String recurrencePattern = recurrencePatternField.getText();
+//                     String dueDateStr = dueDateField.getText();
+//                     Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
 
-                    // Gọi phương thức createReminderInstance của User để tạo Reminder instance
-                    Reminder reminder = UserService.createReminderInstance(taskID, recurrencePattern, dueDate);
+//                     // Gọi phương thức createReminderInstance của User để tạo Reminder instance
+//                     Reminder reminder = UserService.createReminderInstance(taskID, recurrencePattern, dueDate);
                     
-                    // Gọi phương thức addReminder của User để lưu Reminder vào Firestore
-                    UserService.getCurrentUser().addReminder(reminder);
-                    JOptionPane.showMessageDialog(null, "Reminder added successfully.");
+//                     // Gọi phương thức addReminder của User để lưu Reminder vào Firestore
+//                     UserService.getCurrentUser().addReminder(reminder);
+//                     JOptionPane.showMessageDialog(null, "Reminder added successfully.");
                     
-                    new HomePage();
-                    dispose();
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(null, "Failed to add reminder: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }
-        });
+//                     new HomePage();
+//                     dispose();
+//                 } catch (Exception ex) {
+//                     JOptionPane.showMessageDialog(null, "Failed to add reminder: " + ex.getMessage());
+//                     ex.printStackTrace();
+//                 }
+//             }
+//         });
 
-        backButton = new JButton("Back");
-        backButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                new HomePage();
-                dispose();
-            }
-        });
+//         backButton = new JButton("Back");
+//         backButton.addActionListener(new ActionListener() {
+//             @Override
+//             public void actionPerformed(ActionEvent e) {
+//                 new HomePage();
+//                 dispose();
+//             }
+//         });
 
-        add(taskIDLabel);
-        add(taskIDField);
-        add(recurrencePatternLabel);
-        add(recurrencePatternField);
-        add(dueDateLabel);
-        add(dueDateField);
-        add(addReminderButton);
-        add(backButton);
+//         add(taskIDLabel);
+//         add(taskIDField);
+//         add(recurrencePatternLabel);
+//         add(recurrencePatternField);
+//         add(dueDateLabel);
+//         add(dueDateField);
+//         add(addReminderButton);
+//         add(backButton);
 
-        setVisible(true);
-    }
-}
+//         setVisible(true);
+//     }
+// }
 
 class ViewAllRemindersPage extends JFrame {
     private JTextArea remindersArea;
