@@ -18,7 +18,7 @@ public class Workspace {
     private String description;
     private String ownerId;
     private List<String> collaboratorIds;
-    private List<String> taskIds;
+    private List<Task> tasks;
 
     // Constructor
     public Workspace(String workspaceID, String name, String description, String ownerId) {
@@ -70,12 +70,12 @@ public class Workspace {
         this.collaboratorIds = collaboratorIds;
     }
 
-    public List<String> getTasks() {
-        return taskIds;
+    public List<Task> getTasks() {
+        return tasks;
     }
 
-    public void setTasks(List<String> taskIds) {
-        this.taskIds = taskIds;
+    public void setTasks(List<Task> taskIds) {
+        this.tasks = tasks;
     }
 
     // Methods

@@ -4,33 +4,31 @@ import java.util.Date;
 import java.util.List;
 
 // Enums for Priority and Status
-enum Priority {
-    HIGH, MEDIUM, LOW
-}
 
-enum Status {
-    New, Pending, Todo, Completed, Overdue, Archived
-}
+
+
 
 public class Task {
-    private int taskID;
+    private String taskID; // Firestore-compatible ID
     private String title;
     private String description;
-    private Date dueDate;
-    private Priority priority; // Enum: High, Medium, Low
-    private Status status; // Enum: New, Pending, Todo, Completed, Overdue, Archived
-    private List<String> tagsname; // Updated to tagsname
+    private Date dueDate; // Date type
+    private Priority priority; // Enum: HIGH, MEDIUM, LOW
+    private Status status; // Enum: NEW, PENDING, COMPLETED, etc.
+    private List<String> tagsname; // Tags associated with the task
     private List<String> assigneesIds; // List of assignee IDs
-    private List<String> reminderIds;  // List of reminder IDs
-    private String workspaceId;        // Workspace ID
+    private List<String> reminderIds; // List of reminder IDs
+    private String workspaceId; // ID of the workspace the task belongs to
 
     // Constructors
-    public Task() {}
+    public Task() {
+        // Default constructor
+    }
 
     /**
-     * Constructor with all fields
+     * Constructor with all fields.
      */
-    public Task(int taskID, String title, String description, Date dueDate, Priority priority, Status status,
+    public Task(String taskID, String title, String description, Date dueDate, Priority priority, Status status,
                 List<String> tagsname, List<String> assigneesIds, List<String> reminderIds, String workspaceId) {
         this.taskID = taskID;
         this.title = title;
@@ -45,11 +43,11 @@ public class Task {
     }
 
     // Getters and Setters
-    public int getTaskID() {
+    public String getTaskID() {
         return taskID;
     }
 
-    public void setTaskID(int taskID) {
+    public void setTaskID(String taskID) {
         this.taskID = taskID;
     }
 
@@ -125,66 +123,45 @@ public class Task {
         this.workspaceId = workspaceId;
     }
 
-    // Methods (Updated to match the attributes)
-
-    /**
-     * Adds a new assignee to the task by ID.
-     */
+    // Additional methods
     public void addAssignee(String assigneeId) {
         if (!assigneesIds.contains(assigneeId)) {
             assigneesIds.add(assigneeId);
         }
     }
 
-    /**
-     * Removes an assignee from the task by ID.
-     */
     public void removeAssignee(String assigneeId) {
         assigneesIds.remove(assigneeId);
     }
 
-    /**
-     * Adds a new reminder to the task by ID.
-     */
     public void addReminder(String reminderId) {
         if (!reminderIds.contains(reminderId)) {
             reminderIds.add(reminderId);
         }
     }
 
-    /**
-     * Updates the status of the task.
-     */
+    public void removeReminder(String reminderId) {
+        reminderIds.remove(reminderId);
+    }
+
     public void updateStatus(Status newStatus) {
         this.status = newStatus;
     }
 
-    /**
-     * Marks the task as completed.
-     */
     public void markComplete() {
         this.status = Status.Completed;
     }
 
-    /**
-     * Adds a tag to the task.
-     */
     public void addTagname(String tag) {
         if (!tagsname.contains(tag)) {
             tagsname.add(tag);
         }
     }
 
-    /**
-     * Removes a tag from the task.
-     */
     public void removeTagname(String tag) {
         tagsname.remove(tag);
     }
 
-    /**
-     * Updates details of the task (e.g., title or description).
-     */
     public void updateDetails(String title, String description) {
         if (title != null && !title.isEmpty()) {
             this.title = title;
@@ -192,5 +169,21 @@ public class Task {
         if (description != null && !description.isEmpty()) {
             this.description = description;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "Task{" +
+                "taskID='" + taskID + '\'' +
+                ", title='" + title + '\'' +
+                ", description='" + description + '\'' +
+                ", dueDate=" + dueDate +
+                ", priority=" + priority +
+                ", status=" + status +
+                ", tagsname=" + tagsname +
+                ", assigneesIds=" + assigneesIds +
+                ", reminderIds=" + reminderIds +
+                ", workspaceId='" + workspaceId + '\'' +
+                '}';
     }
 }

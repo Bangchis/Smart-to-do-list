@@ -1,13 +1,25 @@
 package com.smarttodo.ui;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.cloud.FirestoreClient;
 import com.smarttodo.firebase.FirebaseConfig;
+import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
+import com.smarttodo.workspace.model.Workspace;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 public class Homepage extends JFrame {
 
@@ -133,6 +145,88 @@ public class Homepage extends JFrame {
         int newWidth = getWidth() / 6; // Sidebar width is 1/6th of the window width
         revalidate(); // Revalidate the layout to update the sidebar size
     }
+
+    public void redirectToWorkspacePage(String workspaceId) {
+    if (workspaceId == null || workspaceId.isEmpty()) {
+        System.out.println("Error: Workspace ID is null or empty");
+        return;
+    }
+
+    try {
+        // Retrieve workspace data from Firestore
+        System.out.println("Fetching workspace for ID: " + workspaceId);
+        Firestore db = FirestoreClient.getFirestore();
+        DocumentReference workspaceDocRef = db.collection("Workspace").document(workspaceId);
+        DocumentSnapshot snapshot = workspaceDocRef.get().get();  // Retrieve the workspace document
+
+        if (snapshot == null) {
+            System.out.println("Error: Snapshot is null for Workspace ID: " + workspaceId);
+            return;
+        }
+
+        if (!snapshot.exists()) {
+            System.out.println("Workspace not found for ID: " + workspaceId);
+            return;
+        }
+
+        // Retrieve workspace data
+        String name = snapshot.getString("name");
+        String description = snapshot.getString("description");
+        String ownerId = snapshot.getString("ownerId");
+        List<String> collaboratorIds = (List<String>) snapshot.get("collaboratorIds");
+
+        // Check for null values
+        if (name == null || description == null || ownerId == null || collaboratorIds == null) {
+            System.out.println("Error: Some fields in the workspace snapshot are null");
+            return;
+        }
+
+        // Create Workspace instance
+        Workspace workspace = new Workspace(workspaceId, name, description, ownerId);
+        workspace.setCollaborators(collaboratorIds);
+
+        // Retrieve the tasks from the Task subcollection of this workspace
+        List<Task> tasks = new ArrayList<>();
+        CollectionReference taskCollection = workspaceDocRef.collection("Task");
+        ApiFuture<QuerySnapshot> query = taskCollection.get();
+
+        // Process the task documents
+        List<QueryDocumentSnapshot> taskDocs = query.get().getDocuments();
+        System.out.println("Number of tasks fetched: " + taskDocs.size());
+
+        for (QueryDocumentSnapshot taskDoc : taskDocs) {
+            Task task = taskDoc.toObject(Task.class);  // Convert each document to a Task object
+            if (task == null) {
+                System.out.println("Warning: Task is null for document ID: " + taskDoc.getId());
+            } else {
+                tasks.add(task);
+            }
+        }
+
+        // Set the tasks for the workspace
+        workspace.setTasks(tasks);
+
+        // Create and display the WorkspaceUI
+        WorkspaceUI workspaceUI = new WorkspaceUI(workspace);
+        workspaceUI.setVisible(true);  // Show the workspace page (WorkspaceUI)
+
+        // Dispose of the Homepage window (if no longer needed)
+        this.dispose();  // Assuming `this` refers to the Homepage frame
+
+    } catch (InterruptedException e) {
+        System.out.println("Error: Firestore query was interrupted: " + e.getMessage());
+        e.printStackTrace();
+    } catch (ExecutionException e) {
+        System.out.println("Error: Execution error while querying Firestore: " + e.getMessage());
+        e.printStackTrace();
+    } catch (Exception e) {
+        System.out.println("General error while fetching workspace data: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+
+    
+    
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
