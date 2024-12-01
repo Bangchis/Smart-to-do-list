@@ -16,10 +16,12 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.firebase.service.FirebaseFirestore;
 import com.smarttodo.reminder.model.Reminder;
 import com.smarttodo.user.model.User;
 import com.smarttodo.workspace.model.Workspace;
 import com.google.cloud.Timestamp;
+
 
 public class UserService {
     // Static variable to hold the current user instance
@@ -163,6 +165,7 @@ public class UserService {
         
         return new Workspace( workspaceId, name, description, currentUser.getUserId());
     }
+    
 
     public static User getUserData(String userId) throws Exception {
         // Fetch user details from Firestore

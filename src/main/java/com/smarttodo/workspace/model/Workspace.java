@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
+import com.smarttodo.user.service.UserService;
 
 import java.util.List;
 import com.smarttodo.user.model.User;
@@ -98,6 +99,11 @@ public class Workspace {
         // Logic to create a new task
     }
 
+    public static Workspace createWorkspaceInstance(String workspaceId, String name, String description) {
+        Workspace workspace = new Workspace(workspaceId, name, description, UserService.getCurrentUser().getUserId());
+        System.out.println("Workspace instance created with ID: " + workspaceId);
+        return workspace;
+    }
     
 }
 

@@ -1,13 +1,24 @@
 package com.smarttodo.ui;
 
 import javax.swing.*;
+
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteBatch;
+import com.google.cloud.firestore.WriteResult;
 import com.smarttodo.firebase.FirebaseConfig;
 import com.smarttodo.user.model.User;
+import com.smarttodo.user.service.UserService;
+import com.smarttodo.workspace.model.Workspace;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.UUID;
+import java.util.concurrent.Executors;
 
 public class Sidebar extends JPanel {
     private User currentUser;
@@ -31,7 +42,15 @@ public class Sidebar extends JPanel {
         String[] sidebarOptions = {"Search", "Smart Assistant", "Home", "Create Workspace", "Add Reminder"};
         for (String option : sidebarOptions) {
             JButton button = createSidebarButton(option);
-            if (option.equals("Add Reminder")) {
+            if (option.equals("Create Workspace")) {
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        // Call the method to create a new workspace
+                        createWorkspace();
+                    }
+                });
+            } else if (option.equals("Add Reminder")) {
                 button.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
@@ -71,6 +90,25 @@ public class Sidebar extends JPanel {
         // Set fixed width for the sidebar in pixels (e.g., 250px)
         setFixedSidebarWidth();
     }
+
+    // Method to create a workspace with default values and add to Firebase
+    private void createWorkspace() {
+        try {
+            String workspaceId = UUID.randomUUID().toString();
+                    // Call WorkspaceService to create a new Workspace instance and save to Firestore   
+            Workspace workspace = UserService.createWorkspaceInstance(workspaceId,"New Page", "Fresh new page");
+            currentUser.createnewWorkspace(workspaceId,"New Page", "Fresh new page");
+            currentUser.addWorkspacesId(workspaceId);
+            JOptionPane.showMessageDialog(null, "Workspace added successfully.");
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "Failed to add workspace: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+    
+    
+
 
     // Method to create a styled button for the sidebar
     private JButton createSidebarButton(String text) {

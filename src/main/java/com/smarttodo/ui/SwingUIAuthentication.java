@@ -456,9 +456,7 @@ class AddWorkspacePage extends JFrame {
                     String workspaceId = UUID.randomUUID().toString();
                     // Call WorkspaceService to create a new Workspace instance and save to Firestore
                    
-                    Workspace workspace = UserService.createWorkspaceInstance(workspaceId,name, description);
-
-                    
+                    Workspace workspace = Workspace.createWorkspaceInstance(workspaceId,name, description);
                     UserService.getCurrentUser().createnewWorkspace(workspaceId,name,description);
                     UserService.getCurrentUser().addWorkspacesId(workspaceId);
 
