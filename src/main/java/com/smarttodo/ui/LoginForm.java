@@ -125,7 +125,7 @@ public class LoginForm extends JFrame {
                                 JOptionPane.showMessageDialog(null, "Login successful! Welcome!");
 
                                 // Open homepage and pass user data
-                                new Homepage(userData).setVisible(true);
+                                new Home(userData).setVisible(true);
                                 dispose(); // Close the login form
                             } else {
                                 // If user data not found
