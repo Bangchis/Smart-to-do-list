@@ -6,10 +6,6 @@ import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
 
-import java.util.List;
-import com.smarttodo.user.model.User;
-import com.smarttodo.task.model.Task;
-
 public class Workspace {
     // Attributes
     private String workspaceID;
@@ -19,6 +15,7 @@ public class Workspace {
     private String ownerId;
     private List<String> collaboratorIds;
     private List<Task> tasks;
+    private List<String> tags;
 
     // Constructor
     public Workspace(String workspaceID, String name, String description, String ownerId) {
@@ -76,6 +73,14 @@ public class Workspace {
 
     public void setTasks(List<Task> taskIds) {
         this.tasks = tasks;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
     }
 
     // Methods

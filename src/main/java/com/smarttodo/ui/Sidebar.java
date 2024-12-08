@@ -2,10 +2,15 @@ package com.smarttodo.ui;
 
 import javax.swing.*;
 import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
+import com.smarttodo.task.model.Priority;
+import com.smarttodo.task.model.Status;
+import com.smarttodo.task.model.Task;
 import com.smarttodo.ui.Sidebar.OnWorkspaceSwitchListener;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
@@ -14,6 +19,8 @@ import com.smarttodo.workspace.model.Workspace;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -92,23 +99,52 @@ public class Sidebar extends JPanel {
 
         add(homeButton); // Add the button to the sidebar
         
-        // Fetch workspaces for the user (You can leave the original workspace button code here)
+        // Fetch workspaces for the user
         fetchWorkspaces();
     }
 
-    // Method to create a workspace with default values and add to Firebase
     private void createWorkspace() {
         try {
+            // Generate a new workspace ID
             String workspaceId = UUID.randomUUID().toString();
+            
             // Call WorkspaceService to create a new Workspace instance and save to Firestore
             currentUser.createnewWorkspace(workspaceId, "New Workspace", "Fresh new workspace");
             currentUser.addWorkspacesId(workspaceId);
+
+            // Create a Firestore reference for the workspace
+            Firestore db = FirestoreClient.getFirestore();
+            DocumentReference workspaceRef = db.collection("Workspace").document(workspaceId);
+
+            workspaceRef.update("tags", FieldValue.arrayUnion("Personal"));
             
-            JOptionPane.showMessageDialog(null, "Workspace added successfully.");
+            // Create an initial Task
+            Task initialTask = new Task();
+            initialTask.setTaskID(UUID.randomUUID().toString());
+            initialTask.setTitle("First Task");
+            initialTask.setDescription("This is the first task and I'm excited");
+            initialTask.setPriority(Priority.HIGH);
+            initialTask.setStatus(Status.New);
+            initialTask.setTagsname(new ArrayList<>()); // Adding a tag
+            initialTask.setAssigneesIds(new ArrayList<>()); // Empty assignees list initially
+            initialTask.setReminderIds(new ArrayList<>()); // Empty reminder list initially
+            initialTask.setWorkspaceId(workspaceId);
+            initialTask.setDueDate(new Date()); // Set the due date to the current date or modify accordingly
+            
+            // Save the Task into the subcollection under the workspace document
+            CollectionReference tasksRef = workspaceRef.collection("Task");
+            tasksRef.document(initialTask.getTaskID()).set(initialTask);
+
+            // Show success message
+            JOptionPane.showMessageDialog(null, "Workspace and initial task added successfully.");
         } catch (Exception ex) {
+            // Show error message if something goes wrong
             JOptionPane.showMessageDialog(null, "Failed to add workspace: " + ex.getMessage());
             ex.printStackTrace();
         }
+
+        // After creating the workspace and task, reload the workspaces in the sidebar
+        fetchWorkspaces();
     }
 
     // Fetch all workspaces for the current user from Firestore
@@ -126,6 +162,9 @@ public class Sidebar extends JPanel {
                 List<String> workspaceIds = (List<String>) userDoc.get("workspacesId");
                 
                 if (workspaceIds != null) {
+                    // Remove all existing workspace buttons first
+                    removeAllWorkspaceButtons();
+                    
                     // Create a button for each workspace
                     for (String workspaceId : workspaceIds) {
                         createWorkspaceButton(workspaceId);
@@ -155,5 +194,19 @@ public class Sidebar extends JPanel {
 
         // Add button to sidebar
         add(workspaceButton);
+    }
+
+    // Remove all existing workspace buttons
+    private void removeAllWorkspaceButtons() {
+        // Assuming all workspace buttons are added under this panel
+        for (Component component : getComponents()) {
+            if (component instanceof JButton && ((JButton) component).getText().startsWith("Workspace")) {
+                remove(component);
+            }
+        }
+
+        // Revalidate and repaint to ensure UI updates
+        revalidate();
+        repaint();
     }
 }

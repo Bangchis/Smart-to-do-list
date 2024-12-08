@@ -217,13 +217,11 @@ public class User {
             workspaceDetails.put("description", description);
             workspaceDetails.put("ownerId", this.userId);
             workspaceDetails.put("collaboratorIds", new ArrayList<String>());
+            workspaceDetails.put("tags", new ArrayList<String>());
 
             // Add workspace to Firestore collection
             DocumentReference workspaceDocRef = db.collection("Workspace").document(workspaceId);
             workspaceDocRef.set(workspaceDetails).get();
-
-            // Tạo sub-collection "Task" cho Workspace (chưa có task ban đầu)
-            workspaceDocRef.collection("Task").document("exampleTaskId").set(new HashMap<>());
 
             // Add workspaceId to user's workspacesId list and update Firestore
             addWorkspacesId(workspaceId);

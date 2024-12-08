@@ -1,13 +1,5 @@
 package com.smarttodo.workspace.model;
-
-import java.util.List;
-
-import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
-
-import java.util.List;
-import com.smarttodo.user.model.User;
-import com.smarttodo.task.model.Task;
 
 
 
