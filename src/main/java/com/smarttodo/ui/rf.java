@@ -213,7 +213,7 @@ if (userId != null) {
             );
             
             // Open the homepage and pass the User object
-            Homepage ui = new Homepage(loggedInUser);  // Pass User object
+            Home ui = new Home(loggedInUser);  // Pass User object
             ui.setVisible(true);
             
             dispose(); // Close the login form

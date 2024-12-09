@@ -9,17 +9,17 @@ public class Reminder {
     private String taskID;
     private String recurrencePattern; // if recurring
     private Date dueDate;
-    private User user;
+    private String title;
 
     // Constructors
     public Reminder() {}
 
-    public Reminder(String reminderID, String taskID, String recurrencePattern, Date dueDate, User user) {
+    public Reminder(String reminderID, String taskID, String recurrencePattern, Date dueDate, String title) {
         this.reminderID = reminderID;
         this.taskID = taskID;
         this.recurrencePattern = recurrencePattern;
         this.dueDate = dueDate;
-        this.user = user;
+        this.title = title;
     }
 
     // Getters and Setters
@@ -29,6 +29,14 @@ public class Reminder {
 
     public void setReminderID(String reminderID) {
         this.reminderID = reminderID;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getTaskID() {
@@ -53,14 +61,6 @@ public class Reminder {
 
     public void setDueDate(Date dueDate) {
         this.dueDate = dueDate;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
     }
 
     // Methods (to be implemented later)

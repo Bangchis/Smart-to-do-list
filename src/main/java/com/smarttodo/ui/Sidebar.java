@@ -21,7 +21,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -107,17 +109,25 @@ public class Sidebar extends JPanel {
         try {
             // Generate a new workspace ID
             String workspaceId = UUID.randomUUID().toString();
-            
+    
             // Call WorkspaceService to create a new Workspace instance and save to Firestore
             currentUser.createnewWorkspace(workspaceId, "New Workspace", "Fresh new workspace");
             currentUser.addWorkspacesId(workspaceId);
-
+    
             // Create a Firestore reference for the workspace
             Firestore db = FirestoreClient.getFirestore();
             DocumentReference workspaceRef = db.collection("Workspace").document(workspaceId);
-
+    
+            // Set the currentUser as OWNER in the userRoles map
+            Map<String, Object> userRoleMap = new HashMap<>();
+            userRoleMap.put(currentUser.getUserId(), "OWNER");
+    
+            // Update the userRoles map field with the currentUser as OWNER
+            workspaceRef.update("userRoles", userRoleMap);  // Set currentUser as OWNER in the userRoles map
+    
+            // Add a "Personal" tag to the workspace
             workspaceRef.update("tags", FieldValue.arrayUnion("Personal"));
-            
+    
             // Create an initial Task
             Task initialTask = new Task();
             initialTask.setTaskID(UUID.randomUUID().toString());
@@ -130,11 +140,11 @@ public class Sidebar extends JPanel {
             initialTask.setReminderIds(new ArrayList<>()); // Empty reminder list initially
             initialTask.setWorkspaceId(workspaceId);
             initialTask.setDueDate(new Date()); // Set the due date to the current date or modify accordingly
-            
+    
             // Save the Task into the subcollection under the workspace document
             CollectionReference tasksRef = workspaceRef.collection("Task");
             tasksRef.document(initialTask.getTaskID()).set(initialTask);
-
+    
             // Show success message
             JOptionPane.showMessageDialog(null, "Workspace and initial task added successfully.");
         } catch (Exception ex) {
@@ -142,10 +152,12 @@ public class Sidebar extends JPanel {
             JOptionPane.showMessageDialog(null, "Failed to add workspace: " + ex.getMessage());
             ex.printStackTrace();
         }
-
+    
         // After creating the workspace and task, reload the workspaces in the sidebar
         fetchWorkspaces();
     }
+    
+
 
     // Fetch all workspaces for the current user from Firestore
     private void fetchWorkspaces() {

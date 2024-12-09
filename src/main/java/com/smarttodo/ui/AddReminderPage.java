@@ -3,16 +3,19 @@ package com.smarttodo.ui;
 import javax.swing.*;
 import com.smarttodo.user.model.User;
 import com.smarttodo.reminder.model.Reminder;
+import com.smarttodo.reminder.model.RecurrencePattern;
 import com.smarttodo.user.service.UserService;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 public class AddReminderPage extends JDialog {
 
-    private JTextField taskIDField, recurrencePatternField, dueDateField;
+    private JTextField titleField, dueDateField;
+    private JComboBox<RecurrencePattern> recurrencePatternComboBox;
     private JButton addReminderButton, backButton;
     private User currentUser;
 
@@ -24,27 +27,35 @@ public class AddReminderPage extends JDialog {
         setLocationRelativeTo(owner);  // Center the dialog relative to the owner
         setLayout(new GridLayout(4, 2));
 
-        JLabel taskIDLabel = new JLabel("Task ID:");
-        taskIDField = new JTextField();
+        // Title input field
+        JLabel titleLabel = new JLabel("Title:");
+        titleField = new JTextField();
 
-        JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
-        recurrencePatternField = new JTextField();
-
-        JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
+        // Due Date input field (with Date and Time)
+        JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD HH:MM):");
         dueDateField = new JTextField();
 
+        // Recurrence Pattern ComboBox
+        JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
+        recurrencePatternComboBox = new JComboBox<>(RecurrencePattern.values());
+
+        // Add Reminder Button
         addReminderButton = new JButton("Add Reminder");
         addReminderButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    String taskID = taskIDField.getText();
-                    String recurrencePattern = recurrencePatternField.getText();
+                    String title = titleField.getText();
                     String dueDateStr = dueDateField.getText();
-                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
+                    String recurrencePattern = recurrencePatternComboBox.getSelectedItem().toString();
+
+                    // Parse the date and time
+                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd HH:mm").parse(dueDateStr);
 
                     // Create the reminder instance
-                    Reminder reminder = UserService.createReminderInstance(taskID, recurrencePattern, dueDate, currentUser);
+
+                    String taskId = null;
+                    Reminder reminder = UserService.createReminderInstance(taskId, recurrencePattern, dueDate, currentUser, title);
 
                     // Upload the reminder to Firestore under the user's sub-collection of reminders
                     currentUser.addReminder(reminder);
@@ -58,6 +69,7 @@ public class AddReminderPage extends JDialog {
             }
         });
 
+        // Back Button
         backButton = new JButton("Back");
         backButton.addActionListener(new ActionListener() {
             @Override
@@ -66,12 +78,13 @@ public class AddReminderPage extends JDialog {
             }
         });
 
-        add(taskIDLabel);
-        add(taskIDField);
-        add(recurrencePatternLabel);
-        add(recurrencePatternField);
+        // Add components to the dialog
+        add(titleLabel);
+        add(titleField);
         add(dueDateLabel);
         add(dueDateField);
+        add(recurrencePatternLabel);
+        add(recurrencePatternComboBox);
         add(addReminderButton);
         add(backButton);
 

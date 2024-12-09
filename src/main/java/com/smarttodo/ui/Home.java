@@ -1,10 +1,13 @@
 package com.smarttodo.ui;
 
 import com.smarttodo.firebase.FirebaseConfig;
+import com.smarttodo.reminder.model.Reminder;
+import com.smarttodo.reminder.service.ReminderService;
 import com.smarttodo.task.model.Priority;
 import com.smarttodo.task.model.Status;
 import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
+import com.smarttodo.user.service.UserService;
 import com.smarttodo.workspace.model.Workspace;
 
 import javafx.event.ActionEvent;
@@ -16,6 +19,7 @@ import com.google.firebase.cloud.FirestoreClient;
 import javax.swing.*;
 import java.awt.*;
 
+
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
@@ -25,6 +29,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -75,8 +80,7 @@ public class Home extends JFrame {
         contentPanel.add(homepagePanel, "Home");
 
         // Workspace panel (initially empty or placeholder)
-        JPanel workspacePanel = createWorkspacePanel("a7d69ce4-4648-49f4-9208-cef26b9ee440"
-		);
+        JPanel workspacePanel = createWorkspacePanel("d68bbe29-5915-4e05-9aa8-76ee68094fd4");
         contentPanel.add(workspacePanel, "Workspace");
 
         // Add the content panel to the main frame
@@ -100,16 +104,99 @@ public class Home extends JFrame {
         revalidate(); // Revalidate the layout to update the sidebar size
     }
 
-    // Create the Homepage view panel
     private JPanel createHomepagePanel() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(new Color(30, 30, 30));
+    
+        // Welcome label
         JLabel welcomeLabel = new JLabel("Welcome, " + currentUser.getUsername(), JLabel.CENTER);
         welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
         welcomeLabel.setForeground(Color.WHITE);
-        panel.setBackground(new Color(30, 30, 30));
-        panel.add(welcomeLabel, BorderLayout.CENTER);
-        return panel;
+        mainPanel.add(welcomeLabel, BorderLayout.NORTH);
+    
+        // Reminders panel
+        JPanel remindersPanel = new JPanel();
+        remindersPanel.setLayout(new BoxLayout(remindersPanel, BoxLayout.Y_AXIS)); // Stack vertically
+        remindersPanel.setBackground(new Color(30, 30, 30));
+    
+        // Add heading "Reminders"
+        JLabel remindersHeading = new JLabel("Reminders");
+        remindersHeading.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        remindersHeading.setForeground(Color.WHITE);
+        remindersHeading.setBorder(BorderFactory.createEmptyBorder(20, 10, 10, 10)); // Margin for the heading
+        remindersPanel.add(remindersHeading);
+    
+        // Container for the scrollable part of the reminders
+        JPanel scrollableContainer = new JPanel();
+        scrollableContainer.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20)); // Align buttons to center
+        scrollableContainer.setBackground(new Color(30, 30, 30));
+    
+        // Fetch reminders asynchronously
+        ReminderService reminderService = new ReminderService(currentUser);
+        List<Reminder> reminders = null;
+        try {
+            reminders = reminderService.fetchReminders(); // Fetch reminders
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println(reminders);
+        // Add reminder buttons (if any reminders exist)
+        if (reminders != null) {
+            Color[] colors = {
+                new Color(70, 130, 180), // Steel Blue
+                new Color(220, 20, 60),  // Crimson
+                new Color(128, 0, 128),  // Purple
+                new Color(255, 215, 0),  // Gold
+                new Color(0, 128, 0)     // Green
+            };
+    
+            // Create reminder buttons dynamically based on fetched reminders
+            for (int i = 0; i < Math.min(reminders.size(), 5); i++) {
+                Reminder reminder = reminders.get(i);
+                JButton reminderButton = new JButton("Reminder: " + reminder.getTaskID());
+                reminderButton.setPreferredSize(new Dimension(120, 100)); // Size for each reminder button
+                reminderButton.setBackground(colors[i % colors.length]); // Cycle through colors
+                reminderButton.setForeground(Color.WHITE);
+                reminderButton.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                reminderButton.setFocusPainted(false);
+                scrollableContainer.add(reminderButton);
+            }
+        }
+    
+        // Set the preferred size of the scrollable container
+        scrollableContainer.setPreferredSize(new Dimension(600, 120));  // 600px width to fit 5 buttons with 20px gaps
+    
+        // Scroll panel for reminders (only horizontal scroll)
+        JScrollPane scrollPane = new JScrollPane(scrollableContainer,
+                JScrollPane.VERTICAL_SCROLLBAR_NEVER,  // No vertical scrollbar
+                JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);  // Horizontal scrollbar always
+    
+        remindersPanel.add(scrollPane);
+    
+        // Set a fixed height for the reminders panel (height can be adjusted)
+        remindersPanel.setPreferredSize(new Dimension(800, 300));
+    
+        // Add the reminders panel to the main panel
+        mainPanel.add(remindersPanel, BorderLayout.CENTER);
+    
+        // Calendar panel container: Create a panel for calendar views
+        JPanel calendarPanelContainer = new JPanel(new BorderLayout());
+        calendarPanelContainer.setBackground(new Color(30, 30, 30));
+    
+        // Initialize CalendarManager and pass reminders
+        CalendarManager calendarManager = new CalendarManager(reminders);
+        calendarPanelContainer.add(calendarManager, BorderLayout.CENTER); // Add CalendarManager panel
+    
+        // Add the calendar panel container to the main panel
+        mainPanel.add(calendarPanelContainer, BorderLayout.SOUTH);
+    
+        // Add panels to the main frame
+        add(mainPanel, BorderLayout.CENTER);
+    
+        return mainPanel;
     }
+    
 
     private JPanel createWorkspacePanel(String workspaceId) {
         JPanel panel = new JPanel();
@@ -137,17 +224,25 @@ public class Home extends JFrame {
                 appBar.setPreferredSize(new Dimension(panel.getWidth(), 50)); // Fixed height of 50px
                 appBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50)); // Ensure it doesn't grow vertically
     
-                // Add Task Button with "+" icon on the Right
-                JButton addTaskButton = new JButton("+");
-                addTaskButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-                addTaskButton.setForeground(Color.BLACK);
-                addTaskButton.setBackground(new Color(60, 60, 60));
-                addTaskButton.setFocusPainted(false); // Remove focus painting
-                addTaskButton.setPreferredSize(new Dimension(50, 50)); // IconButton size
-                addTaskButton.addActionListener(e -> openAddTaskDialog(workspaceId)); // Open dialog on button click
+                // Fetch the user's role in the workspace
+                String currentUserId = currentUser.getUserId();  // Get current user ID
+                Map<String, String> userRoles = (Map<String, String>) workspaceDoc.get("userRoles");  // userRoles is a map
     
-                // Add the button to the app bar, aligned to the right
-                appBar.add(addTaskButton, BorderLayout.EAST);
+                String userRole = userRoles.getOrDefault(currentUserId, "VIEWER"); // Default to "VIEWER" if the user is not in the map
+    
+                // Only show the Add Task button if the user is not a VIEWER
+                if (!"VIEWER".equals(userRole)) {
+                    JButton addTaskButton = new JButton("+");
+                    addTaskButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+                    addTaskButton.setForeground(Color.BLACK);
+                    addTaskButton.setBackground(new Color(60, 60, 60));
+                    addTaskButton.setFocusPainted(false); // Remove focus painting
+                    addTaskButton.setPreferredSize(new Dimension(50, 50)); // IconButton size
+                    addTaskButton.addActionListener(e -> openAddTaskDialog(workspaceId)); // Open dialog on button click
+    
+                    // Add the button to the app bar, aligned to the right
+                    appBar.add(addTaskButton, BorderLayout.EAST);
+                }
     
                 // Add the app bar to the main panel
                 panel.add(appBar);
@@ -188,7 +283,7 @@ public class Home extends JFrame {
                     if (querySnapshot != null && !querySnapshot.isEmpty()) {
                         for (QueryDocumentSnapshot document : querySnapshot) {
                             Task task = document.toObject(Task.class);
-                            createTaskTile(task, tasksPanel); // Create a task tile for each task
+                            createTaskTile(task, tasksPanel, userRole); // Create a task tile for each task
                         }
                     } else {
                         // No tasks in the workspace, show a message
@@ -217,6 +312,8 @@ public class Home extends JFrame {
     
         return panel;
     }
+    
+
     
     
     
@@ -407,7 +504,7 @@ private void openAddTaskDialog(String workspaceId) {
     addDialog.setVisible(true);
 }
 
-    private void createTaskTile(Task task, JPanel panel) {
+    private void createTaskTile(Task task, JPanel panel, String userRole) {
         // Create a task tile (a panel for each task)
         JPanel taskTile = new JPanel();
         taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS)); // Stack vertically
@@ -475,14 +572,16 @@ private void openAddTaskDialog(String workspaceId) {
         taskTile.add(statusLabel);
         taskTile.add(Box.createVerticalStrut(5));
         taskTile.add(tagsPanel); // Add Tags Panel
-    
-        // Add MouseListener to handle clicks for editing
-        taskTile.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                openEditDialog(task, taskTile);
-            }
-        });
+        
+        if (!"VIEWER".equals(userRole)) {
+            taskTile.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    openEditDialog(task, taskTile);
+                }
+            });
+        }
+        
     
         // Add the task tile to the panel
         panel.add(taskTile);
@@ -656,6 +755,7 @@ private void openEditDialog(Task task, JPanel taskTile) {
 
         // Save changes to Firestore
         saveTaskChanges(task, newTitle, newDescription, newDueDate, newPriority, newStatus, uniqueTags);
+
         // Close the dialog
         editDialog.dispose();
     });

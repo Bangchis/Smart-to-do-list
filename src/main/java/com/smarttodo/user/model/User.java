@@ -2,6 +2,7 @@ package com.smarttodo.user.model;
 
 import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
@@ -146,11 +147,13 @@ public class User {
             
             // Create reminder details map
             Map<String, Object> reminderDetails = new HashMap<>();
-            reminderDetails.put("reminderID", reminder.getReminderID());
+            reminderDetails.put("title", reminder.getTitle());
             reminderDetails.put("taskID", reminder.getTaskID());
             reminderDetails.put("recurrencePattern", reminder.getRecurrencePattern());
-            reminderDetails.put("dueDate", reminder.getDueDate().toString());
-            reminderDetails.put("user", reminder.getUser().getUserId());
+            
+            // Convert the due date to Firestore Timestamp using Timestamp.of() method
+            Timestamp dueDateTimestamp = Timestamp.of(new java.sql.Timestamp(reminder.getDueDate().getTime()));
+            reminderDetails.put("dueDate", dueDateTimestamp);
             
             // Add reminder to Firestore sub-collection
             DocumentReference userDocRef = db.collection("User").document(this.userId);
@@ -163,12 +166,12 @@ public class User {
             // Update reminderIds list in Firestore
             Map<String, Object> updateData = new HashMap<>();
             updateData.put("reminderIds", this.reminderIds);
-            userDocRef.update(updateData).get(); // Lưu lại thay đổi vào Firestore
+            userDocRef.update(updateData).get(); // Save changes to Firestore
     
             // Update currentUser
             UserService.setCurrentUser(this);
             System.out.println("Updated currentUser with new reminderIds: " + this.reminderIds);
-            
+    
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -216,7 +219,7 @@ public class User {
             workspaceDetails.put("name", name);
             workspaceDetails.put("description", description);
             workspaceDetails.put("ownerId", this.userId);
-            workspaceDetails.put("collaboratorIds", new ArrayList<String>());
+            workspaceDetails.put("userRoles", new ArrayList<String>());
             workspaceDetails.put("tags", new ArrayList<String>());
 
             // Add workspace to Firestore collection

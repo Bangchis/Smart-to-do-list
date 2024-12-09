@@ -151,12 +151,12 @@ public class UserService {
     
 
 
-    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate, User currentUser) {
+    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate, User currentUser, String titleString) {
         if (currentUser == null) {
             throw new IllegalStateException("No user is currently logged in.");
         }
         String reminderID = UUID.randomUUID().toString(); // Generate a unique ID for the reminder
-        return new Reminder(reminderID, taskID, recurrencePattern, dueDate, currentUser);
+        return new Reminder(reminderID, taskID, recurrencePattern, dueDate, titleString);
     
     }
 
