@@ -5,37 +5,42 @@
   <version>1.0-SNAPSHOT</version>
 
   <dependencies>
-    <!-- Firebase Admin SDK -->
+    <!-- Firebase Admin SDK for authentication and management -->
     <dependency>
         <groupId>com.google.firebase</groupId>
         <artifactId>firebase-admin</artifactId>
-        <version>9.4.1</version> <!-- Cập nhật phiên bản mới nhất tương thích -->
+        <version>9.4.1</version> <!-- Firebase SDK version -->
     </dependency>
-
-    <!-- Google Auth Library -->
+   
+    <!-- Google Authentication Library (Required by Firebase Admin SDK) -->
     <dependency>
         <groupId>com.google.auth</groupId>
         <artifactId>google-auth-library-oauth2-http</artifactId>
-        <version>1.29.0</version> <!-- Cập nhật lên phiên bản mới nhất -->
+        <version>1.29.0</version> <!-- For OAuth2-based authentication -->
     </dependency>
 
-    <!-- SLF4J Logger -->
+    <!-- SLF4J Logging Library -->
     <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
-        <version>2.0.9</version> <!-- Phiên bản mới nhất -->
+        <version>2.0.9</version> <!-- SLF4J API version -->
     </dependency>
     <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
-        <version>2.0.9</version> <!-- Phiên bản mới nhất -->
+        <version>2.0.9</version> <!-- Simple SLF4J logger implementation -->
     </dependency>
 
-    <!-- JSON Library -->
+    <!-- JSON Library for handling JSON data -->
     <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20230227</version> <!-- Phiên bản mới nhất -->
+        <version>20230227</version> <!-- For JSON parsing -->
+    </dependency>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20210307</version>
     </dependency>
   </dependencies>
 
@@ -44,13 +49,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version> <!-- Cập nhật phiên bản mới -->
+        <version>3.8.1</version> <!-- Plugin for compiling Java code -->
         <configuration>
-          <source>1.8</source> <!-- Đảm bảo dùng Java 8 trở lên -->
-          <target>1.8</target>
+          <source>1.8</source> <!-- Java version 1.8 -->
+          <target>1.8</target> <!-- Java target version -->
         </configuration>
       </plugin>
     </plugins>
   </build>
 </project>
-

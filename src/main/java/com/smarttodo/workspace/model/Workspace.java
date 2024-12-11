@@ -1,18 +1,13 @@
 package com.smarttodo.workspace.model;
 
 import java.util.List;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.WriteResult;
-import com.google.api.core.ApiFuture;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
+
 import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
-import com.google.firebase.cloud.FirestoreClient;
-import com.google.cloud.firestore.Firestore;
-
-
-
 
 public class Workspace {
     // Attributes
@@ -20,8 +15,9 @@ public class Workspace {
     private String name;
     private String description;
     private String ownerId;
-    private List<String> collaboratorIds;
-    private List<String> taskIds;
+    private Map<User, WorkspaceRole> userRoles;  // Map to store user roles
+    private List<Task> tasks;
+    private List<String> tags;
 
     // Constructor
     public Workspace(String workspaceID, String name, String description, String ownerId) {
@@ -29,6 +25,9 @@ public class Workspace {
         this.name = name;
         this.description = description;
         this.ownerId = ownerId;
+        this.userRoles = new HashMap<>();  // Initialize the userRoles map
+        this.tasks = new ArrayList<>();
+        this.tags = new ArrayList<>();
     }
 
     // Getters and Setters
@@ -64,109 +63,117 @@ public class Workspace {
         this.ownerId = ownerId;
     }
 
-    public List<String> getCollaborators() {
-        return collaboratorIds;
+    public Map<User, WorkspaceRole> getUserRoles() {
+        return userRoles;
     }
 
-    public void setCollaborators(List<String> collaboratorIds) {
-        this.collaboratorIds = collaboratorIds;
+    public void setUserRoles(Map<User, WorkspaceRole> userRoles) {
+        this.userRoles = userRoles;
     }
 
-    public List<String> getTasks() {
-        return taskIds;
+    public List<Task> getTasks() {
+        return tasks;
     }
 
-    public void setTasks(List<String> taskIds) {
-        this.taskIds = taskIds;
+    public void setTasks(List<Task> tasks) {
+        this.tasks = tasks;
     }
 
-    // Methods
-    public void createTask(Task task) {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-            String taskId = task.getTaskID();
-            task.setWorkspaceId(this.workspaceID);
+    public List<String> getTags() {
+        return tags;
+    }
 
-            // Create task details map
-            DocumentReference workspaceDocRef = db.collection("Workspace").document(this.workspaceID);
-            ApiFuture<WriteResult> future = workspaceDocRef.collection("Task").document(taskId).set(task);
-            future.get(); // Wait for the operation to complete
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
 
-            // Update taskIds list
-            this.taskIds.add(taskId);
-            workspaceDocRef.update("taskIds", this.taskIds).get();
+    // Methods to manage users and roles in workspace
+    public void addUserWithRole(User user, WorkspaceRole role) {
+        userRoles.put(user, role);
+    }
 
-            System.out.println("Task created successfully with ID: " + taskId);
-        } catch (Exception e) {
-            System.err.println("Error while creating task: " + e.getMessage());
-            e.printStackTrace();
+    public void removeUser(User user) {
+        userRoles.remove(user);
+    }
+
+    public void changeUserRole(User user, WorkspaceRole newRole) {
+        if (userRoles.containsKey(user)) {
+            userRoles.put(user, newRole);
         }
     }
 
-    public void removeTask(String taskId) {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-            DocumentReference workspaceDocRef = db.collection("Workspace").document(this.workspaceID);
-            ApiFuture<WriteResult> future = workspaceDocRef.collection("Task").document(taskId).delete();
-            future.get(); // Wait for the operation to complete
+    public WorkspaceRole getUserRole(User user) {
+        return userRoles.getOrDefault(user, WorkspaceRole.VIEWER); // Default to VIEWER if no role assigned
+    }
 
-            // Remove from taskIds list and update Firestore
-            this.taskIds.remove(taskId);
-            workspaceDocRef.update("taskIds", this.taskIds).get();
+    // Method to fetch the user's role in the workspace
+    public WorkspaceRole getUserRoleInWorkspace(User user) {
+        return userRoles.getOrDefault(user, WorkspaceRole.VIEWER); // Default to VIEWER if no role assigned
+    }
 
-            System.out.println("Task removed successfully with ID: " + taskId);
-        } catch (Exception e) {
-            System.err.println("Error while removing task: " + e.getMessage());
-            e.printStackTrace();
+    // Methods for task management
+    public void removeTask(int taskID) {
+        // Logic to remove a task by taskID
+    }
+
+    public void addCollaborator(User user, WorkspaceRole role) {
+        // Only owners or editors can add collaborators
+        WorkspaceRole userRole = getUserRole(user);
+        if (userRole == WorkspaceRole.OWNER || userRole == WorkspaceRole.EDITOR) {
+            addUserWithRole(user, role);
+        } else {
+            System.out.println("Only owners or editors can add collaborators.");
+        }
+    }
+
+    public void removeCollaborator(User user) {
+        // Only owners can remove collaborators
+        if (getUserRole(user) == WorkspaceRole.OWNER) {
+            removeUser(user);
+        } else {
+            System.out.println("Only owners can remove collaborators.");
         }
     }
 
     public void editTask(Task task) {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-            String taskId = task.getTaskID();
-            DocumentReference taskDocRef = db.collection("Workspace").document(this.workspaceID).collection("Task").document(taskId);
-            ApiFuture<WriteResult> future = taskDocRef.set(task);
-            future.get(); // Wait for the operation to complete
-
-            System.out.println("Task edited successfully with ID: " + taskId);
-        } catch (Exception e) {
-            System.err.println("Error while editing task: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Logic to edit an existing task
     }
 
-    public List<Task> getAllTasks() {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-            DocumentReference workspaceDocRef = db.collection("Workspace").document(this.workspaceID);
-            List<Task> tasks = workspaceDocRef.collection("Task").get().get().toObjects(Task.class);
-            System.out.println("Fetched all tasks successfully for workspace ID: " + this.workspaceID);
-            return tasks;
-        } catch (Exception e) {
-            System.err.println("Error while fetching tasks: " + e.getMessage());
-            e.printStackTrace();
-        }
-        return null;
+    public void createTask(Task task) {
+        // Logic to create a new task
     }
 
-    public void addCollaborator(User user) {
-        if (!collaboratorIds.contains(user.getUserId())) {
-            collaboratorIds.add(user.getUserId());
-        }
-        System.out.println("Collaborator added with UserID: " + user.getUserId());
-        // Logic to add a collaborator to Firestore can be added here.
-    }
-
-    public void removeCollaborator(String userId) {
-        collaboratorIds.remove(userId);
-        System.out.println("Collaborator removed with UserID: " + userId);
-        // Logic to remove a collaborator from Firestore can be added here.
-    }
-
+    // Static method to create a workspace instance
     public static Workspace createWorkspaceInstance(String workspaceId, String name, String description) {
         Workspace workspace = new Workspace(workspaceId, name, description, UserService.getCurrentUser().getUserId());
+
+        // Set the current user as the owner
+        User owner = UserService.getCurrentUser();
+        workspace.addUserWithRole(owner, WorkspaceRole.OWNER);
+
         System.out.println("Workspace instance created with ID: " + workspaceId);
         return workspace;
+    }
+
+    // Check if user is the owner of the workspace
+    public boolean isOwner(User user) {
+        return ownerId.equals(user.getUserId());
+    }
+
+    // Check if user has the required role for a task action (edit, create, etc.)
+    public boolean canEdit(User user) {
+        WorkspaceRole role = getUserRole(user);
+        return role == WorkspaceRole.EDITOR || role == WorkspaceRole.OWNER;
+    }
+
+    public boolean canView(User user) {
+        WorkspaceRole role = getUserRole(user);
+        return role == WorkspaceRole.OWNER || role == WorkspaceRole.EDITOR || role == WorkspaceRole.VIEWER;
+    }
+
+    // Additional method to check if a user has permission to view the workspace
+    public boolean canAccessWorkspace(User user) {
+        WorkspaceRole role = getUserRole(user);
+        return role != null && (role == WorkspaceRole.OWNER || role == WorkspaceRole.EDITOR || role == WorkspaceRole.VIEWER);
     }
 }

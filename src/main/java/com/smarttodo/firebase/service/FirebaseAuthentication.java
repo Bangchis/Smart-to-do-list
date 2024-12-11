@@ -10,21 +10,30 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.smarttodo.task.model.Task;
+import com.smarttodo.user.model.User;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
-import com.google.cloud.firestore.WriteResult;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.WriteResult;
+import com.smarttodo.user.service.UserService;
+
 
 public class FirebaseAuthentication {
 
-    private static final String FIREBASE_API_KEY = "AIzaSyATUx5uRVgPlAAyAOKqfUOgEks08CKOqrM";
+    private static final String FIREBASE_API_KEY = "AIzaSyATUx5uRVgPlAAyAOKqfUOgEks08CKOqrM";  // Thay bằng API Key từ Firebase Console
 
     // Phương thức để tạo người dùng mới và đồng thời cập nhật thông tin vào Firestore
+   
+
     public static String createUser(String email, String password, String displayName, String username, String birthday, int gender, String phoneNumber) {
         UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                 .setEmail(email)
@@ -32,21 +41,20 @@ public class FirebaseAuthentication {
                 .setPassword(password)
                 .setDisplayName(displayName)
                 .setDisabled(false);
-
+    
         try {
             // Tạo người dùng mới bằng Firebase Authentication
             UserRecord userRecord = FirebaseAuth.getInstance().createUser(request);
             System.out.println("Successfully created new user: " + userRecord.getUid());
-
+    
             // Lưu thông tin người dùng vào Firestore
             Firestore db = FirestoreClient.getFirestore();
             DocumentReference userDocRef = db.collection("User").document(userRecord.getUid());
-
-            // Tạo các danh sách ban đầu cho reminders, workspaces và assignedTaskIds
+    
+            // Tạo các danh sách ban đầu cho reminders và workspaces
+            
             List<String> workspaceID = new ArrayList<>();  // Khởi tạo danh sách workspaceID trống
             List<String> reminderListId = new ArrayList<>(Arrays.asList("sampleReminderID"));
-            List<String> assignedTaskIds = new ArrayList<>(); // Khởi tạo danh sách assignedTaskIds trống
-
             // Đặt thông tin người dùng vào HashMap
             Map<String, Object> userDetails = new HashMap<>();
             userDetails.put("userID", userRecord.getUid());
@@ -55,13 +63,13 @@ public class FirebaseAuthentication {
             userDetails.put("birthday", birthday);
             userDetails.put("gender", gender);
             userDetails.put("phoneNumber", phoneNumber);
-            userDetails.put("assignedTaskIds", assignedTaskIds); // Khởi tạo danh sách trống cho assignedTaskIds
+            userDetails.put("assignedTasks", new ArrayList<>()); // Khởi tạo danh sách trống
             userDetails.put("reminderIds", reminderListId); // Gán danh sách reminder vào đúng trường
             userDetails.put("workspacesId", workspaceID); // Gán danh sách workspace đúng trường
-
+    
             // Tạo một document mới trong collection "User" với UID làm tên tài liệu
             ApiFuture<WriteResult> future = db.collection("User").document(userRecord.getUid()).set(userDetails);
-
+    
             // Tạo sub-collection "reminders" cho người dùng mới
             Map<String, Object> reminderData = new HashMap<>();
             reminderData.put("reminderID", "sampleReminderID");
@@ -69,22 +77,25 @@ public class FirebaseAuthentication {
             reminderData.put("recurrencePattern", "None");
             reminderData.put("dueDate", new Date().toString());
             reminderData.put("user", userRecord.getUid());
-
+    
             userDocRef.collection("reminders").document("sampleReminder").set(reminderData);
-
+    
             // Chờ cho đến khi ghi xong vào Firestore và xử lý kết quả
             WriteResult result = future.get();
             System.out.println("User details added to Firestore successfully at: " + result.getUpdateTime());
-
+    
             return userRecord.getUid();  // Trả về UID của người dùng mới
-
+    
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
+    
+    
+    
 
-    // Phương thức đăng nhập người dùng
+
     public static String loginUser(String email, String password) throws Exception {
         try {
             // Kiểm tra thông tin đăng nhập
@@ -106,6 +117,10 @@ public class FirebaseAuthentication {
             throw new Exception("Login failed: " + e.getMessage());
         }
     }
+
+    
+
+    
 
     // Phương thức xác thực thông tin đăng nhập người dùng với email và password
     public static boolean verifyUserCredentials(String email, String password) {
@@ -145,6 +160,7 @@ public class FirebaseAuthentication {
         }
     }
 
+    
     public static void getUserById(String userId) {
         try {
             UserRecord userRecord = FirebaseAuth.getInstance().getUser(userId);
@@ -153,4 +169,10 @@ public class FirebaseAuthentication {
             e.printStackTrace();
         }
     }
+
+
+    
+    
+    
 }
+

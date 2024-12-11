@@ -42,6 +42,16 @@ public class Task {
         this.workspaceId = workspaceId;
     }
 
+    //test task 
+
+    public Task(String taskID, String title, String description, String workspaceId) {
+        this.taskID = taskID;
+        this.title = title;
+        this.description = description;
+        
+        this.workspaceId = workspaceId;
+    }
+
     // Getters and Setters
     public String getTaskID() {
         return taskID;
