@@ -6,6 +6,7 @@ import com.smarttodo.reminder.service.ReminderService;
 import com.smarttodo.task.model.Priority;
 import com.smarttodo.task.model.Status;
 import com.smarttodo.task.model.Task;
+import com.smarttodo.ui.Home.AIPopupPanel.SuggestedTask;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
 import com.smarttodo.workspace.model.Workspace;
@@ -13,6 +14,7 @@ import com.smarttodo.workspace.model.Workspace;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
+
 
 import javax.swing.*;
 
@@ -24,7 +26,12 @@ import java.awt.*;
 
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.File;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.awt.event.ComponentAdapter;
@@ -204,6 +211,83 @@ public class Home extends JFrame {
     }
     
 
+
+    
+private List<SuggestedTask> executePythonScript(String tasksJson) {
+    List<SuggestedTask> tasks = new ArrayList<>();
+    String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
+
+    try {
+        // Tạo ProcessBuilder để chạy Python script
+        ProcessBuilder pb = new ProcessBuilder("python3", pythonScriptPath);
+        Process process = pb.start();
+
+        // Gửi JSON qua stdin
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
+            System.out.println("Sending tasks JSON via stdin: " + tasksJson);
+            writer.write(tasksJson);
+            writer.flush();
+        }
+
+        // Đọc stdout từ Python script
+        BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        StringBuilder outputBuilder = new StringBuilder();
+        String line;
+        while ((line = stdoutReader.readLine()) != null) {
+            outputBuilder.append(line).append("\n");
+        }
+
+        // Đọc stderr từ Python script
+        BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+        StringBuilder errorBuilder = new StringBuilder();
+        String errLine;
+        while ((errLine = stderrReader.readLine()) != null) {
+            errorBuilder.append(errLine).append("\n");
+        }
+
+        // Chờ quá trình Python script hoàn thành
+        int exitCode = process.waitFor();
+
+        if (exitCode == 0) {
+            // Parse JSON từ stdout
+            String jsonStr = outputBuilder.toString().trim();
+            System.out.println("Python script output: " + jsonStr);
+
+            // Loại bỏ phần mở đầu "```json" và kết thúc "```" nếu có
+            if (jsonStr.startsWith("```json")) {
+                jsonStr = jsonStr.substring("```json".length()).trim();
+            }
+            if (jsonStr.endsWith("```")) {
+                jsonStr = jsonStr.substring(0, jsonStr.lastIndexOf("```")).trim();
+            }
+
+            // Parse JSON nếu chuỗi là một mảng JSON
+            JSONArray tasksArray = new JSONArray(jsonStr);
+            for (int i = 0; i < tasksArray.length(); i++) {
+                JSONObject taskObj = tasksArray.getJSONObject(i);
+                String time = taskObj.optString("time", "");
+                String task = taskObj.optString("task", "");
+                String notes = taskObj.optString("description", ""); // Dùng "description" từ API
+
+                SuggestedTask st = new SuggestedTask(time, task, notes);
+                tasks.add(st);
+            }
+        } else {
+            System.err.println("Python script exited with code: " + exitCode);
+            if (errorBuilder.length() > 0) {
+                System.err.println("STDERR: " + errorBuilder.toString());
+            }
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    return tasks;
+}
+
+
+
     private JPanel createWorkspacePanel(String workspaceId) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
@@ -263,15 +347,36 @@ public class Home extends JFrame {
                 askAIButton.addActionListener(e -> {
                     AIPopupPanel aiPanel = new AIPopupPanel();
                 
+                    // Truy vấn Firestore để lấy tất cả các task
+                    CollectionReference tasksRef = db.collection("Workspace").document(workspaceId).collection("Task");
+                
                     // Tạo dialog "Loading..." với hiệu ứng xoay
                     LoadingDialog loadingDialog = new LoadingDialog((Frame) SwingUtilities.getWindowAncestor(panel));
                 
                     // Tạo SwingWorker để tải dữ liệu trên luồng nền
-                    SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+                    SwingWorker<List<AIPopupPanel.SuggestedTask>, Void> worker = new SwingWorker<List<AIPopupPanel.SuggestedTask>, Void>() {
+                        private String tasksJson; // Biến lưu JSON task
+                
                         @Override
-                        protected Boolean doInBackground() throws Exception {
-                            // Gọi loadTasks() trong nền, trả về true/false
-                            return aiPanel.loadTasks();
+                        protected List<AIPopupPanel.SuggestedTask> doInBackground() throws Exception {
+                            // Lấy dữ liệu từ Firestore
+                            ApiFuture<QuerySnapshot> future = tasksRef.get();
+                            QuerySnapshot querySnapshot = future.get();
+                
+                            // Tạo JSON Array chứa danh sách các task
+                            JSONArray tasksArray = new JSONArray();
+                
+                            for (QueryDocumentSnapshot document : querySnapshot) {
+                                JSONObject taskObject = new JSONObject(document.getData());
+                                tasksArray.put(taskObject);
+                            }
+                
+                            // Gán JSON Array vào chuỗi
+                            tasksJson = tasksArray.toString(2); // Format đẹp với indent = 2
+                            System.out.println("Generated Tasks JSON: " + tasksJson);
+                
+                            // Gửi JSON qua stdin và nhận danh sách suggested tasks
+                            return executePythonScript(tasksJson);
                         }
                 
                         @Override
@@ -279,7 +384,12 @@ public class Home extends JFrame {
                             // Đóng dialog loading
                             loadingDialog.dispose();
                             try {
-                                Boolean success = get();
+                                // Lấy kết quả từ Python script
+                                List<AIPopupPanel.SuggestedTask> suggestedTasks = get();
+                
+                                // Hiển thị các task trong AI Popup Panel
+                                boolean success = aiPanel.loadTasks(suggestedTasks);
+                
                                 if (success) {
                                     // Nếu load thành công, hiển thị dialog AI
                                     JDialog aiDialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(panel), "AI Suggestions", true);
@@ -310,6 +420,8 @@ public class Home extends JFrame {
                         loadingDialog.setVisible(true); // Hiển thị dialog Loading trong khi worker đang chạy
                     });
                 });
+                
+                
     
                 rightButtonPanel.add(askAIButton);
     
@@ -369,19 +481,24 @@ public class Home extends JFrame {
     
         return panel;
     }
+
+
+
+   
     
-    class AIPopupPanel extends JPanel {
+
+public static class AIPopupPanel extends JPanel {
         private JPanel tasksContainer; // Panel chứa danh sách tasks
     
         public AIPopupPanel() {
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            setBackground(new Color(30,30,30)); // nền giống workspace
+            setBackground(new Color(30, 30, 30)); // Nền giống workspace
     
             // Tiêu đề (header)
             JLabel headerLabel = new JLabel("HERE ARE SUGGESTIONS BASED ON YOUR HABITS", JLabel.CENTER);
             headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
             headerLabel.setForeground(Color.WHITE);
-            headerLabel.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+            headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     
             add(headerLabel);
             add(Box.createVerticalStrut(20));
@@ -389,24 +506,21 @@ public class Home extends JFrame {
             // Panel chứa tasks
             tasksContainer = new JPanel();
             tasksContainer.setLayout(new BoxLayout(tasksContainer, BoxLayout.Y_AXIS));
-            tasksContainer.setBackground(new Color(30,30,30)); 
+            tasksContainer.setBackground(new Color(30, 30, 30));
     
             // JScrollPane bọc quanh tasksContainer
-            JScrollPane scrollPane = new JScrollPane(tasksContainer, 
-                    JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, 
+            JScrollPane scrollPane = new JScrollPane(tasksContainer,
+                    JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
                     JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     
-            scrollPane.getViewport().setBackground(new Color(30,30,30));
-            scrollPane.setBorder(null); 
+            scrollPane.getViewport().setBackground(new Color(30, 30, 30));
+            scrollPane.setBorder(null);
     
             add(scrollPane);
             setPreferredSize(new Dimension(300, 400));
         }
     
-        public boolean loadTasks() {
-            // Gọi python script để lấy dữ liệu JSON và parse
-            List<SuggestedTask> tasks = fetchTasksFromPython();
-    
+        public boolean loadTasks(List<SuggestedTask> tasks) {
             // Xóa các task cũ nếu có
             tasksContainer.removeAll();
     
@@ -419,16 +533,17 @@ public class Home extends JFrame {
     
                 tasksContainer.revalidate();
                 tasksContainer.repaint();
+                System.out.println("No tasks were fetched from Python script.");
                 return false; // Không load được task
             } else {
                 // Hiển thị các tasks dạng panel
                 for (SuggestedTask t : tasks) {
-                    tasksContainer.add(Box.createVerticalStrut(10)); 
+                    tasksContainer.add(Box.createVerticalStrut(10));
     
                     // Tạo panel cho một task
                     JPanel taskPanel = new JPanel();
                     taskPanel.setLayout(new BoxLayout(taskPanel, BoxLayout.Y_AXIS));
-                    taskPanel.setBackground(new Color(50, 50, 50)); 
+                    taskPanel.setBackground(new Color(50, 50, 50));
                     taskPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
     
                     JLabel timeLabel = new JLabel("Time: " + t.time);
@@ -458,93 +573,9 @@ public class Home extends JFrame {
                 return true; // Load thành công
             }
         }
-        
-
-        
-        
-        /**
-         * Gọi Python script (ai.py) để lấy kết quả JSON dạng:
-         * {
-         *   "suggested_tasks": [
-         *      {
-         *         "time": "...",
-         *         "task": "...",
-         *         "notes": "..."
-         *      },
-         *      ...
-         *   ]
-         * }
-         */
-        private List<SuggestedTask> fetchTasksFromPython() {
-            List<SuggestedTask> tasks = new ArrayList<>();
-            String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py"; // Chỉnh đường dẫn phù hợp
-        
-            try {
-                ProcessBuilder pb = new ProcessBuilder("python3", pythonScriptPath);
-                Process process = pb.start();
-        
-                // Đọc stdout
-                BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                StringBuilder outputBuilder = new StringBuilder();
-                String line;
-                while ((line = stdoutReader.readLine()) != null) {
-                    outputBuilder.append(line);
-                }
-        
-                // Đọc stderr nếu cần
-                BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                StringBuilder errorBuilder = new StringBuilder();
-                String errLine;
-                while ((errLine = stderrReader.readLine()) != null) {
-                    errorBuilder.append(errLine).append("\n");
-                }
-        
-                int exitCode = process.waitFor();
-                if (exitCode == 0) {
-                    String jsonStr = outputBuilder.toString().trim();
-                    System.out.println("STDOUT: " + jsonStr);
-        
-                    // Loại bỏ phần mở đầu "```json" và kết thúc "```" nếu có
-                    if (jsonStr.startsWith("```json")) {
-                        jsonStr = jsonStr.substring("```json".length()).trim();
-                    }
-                    if (jsonStr.endsWith("```")) {
-                        jsonStr = jsonStr.substring(0, jsonStr.lastIndexOf("```")).trim();
-                    }
-        
-                    // Parse JSON nếu chuỗi là một mảng JSON
-                    if (!jsonStr.isEmpty()) {
-                        // Nếu chuỗi JSON là mảng, dùng JSONArray
-                        JSONArray tasksArray = new JSONArray(jsonStr);
-                        for (int i = 0; i < tasksArray.length(); i++) {
-                            JSONObject taskObj = tasksArray.getJSONObject(i);
-        
-                            String time = taskObj.optString("time", "");
-                            String task = taskObj.optString("task", "");
-                            String notes = taskObj.optString("notes", "");
-        
-                            SuggestedTask st = new SuggestedTask(time, task, notes);
-                            tasks.add(st);
-                        }
-                    }
-                } else {
-                    System.err.println("Python script exited with code: " + exitCode);
-                    // In stderr nếu có
-                    if (errorBuilder.length() > 0) {
-                        System.err.println("STDERR: " + errorBuilder.toString());
-                    }
-                }
-        
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        
-            return tasks;
-        }
-        
     
         // Lớp chứa dữ liệu cho một suggested task
-        class SuggestedTask {
+        static class SuggestedTask {
             String time;
             String task;
             String description;
@@ -556,6 +587,7 @@ public class Home extends JFrame {
             }
         }
     }
+    
     
 
     class LoadingSpinner extends JPanel {
