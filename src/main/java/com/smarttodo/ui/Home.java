@@ -213,78 +213,90 @@ public class Home extends JFrame {
 
 
     
-private List<SuggestedTask> executePythonScript(String tasksJson) {
-    List<SuggestedTask> tasks = new ArrayList<>();
-    String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
-
-    try {
-        // Tạo ProcessBuilder để chạy Python script
-        ProcessBuilder pb = new ProcessBuilder("python3", pythonScriptPath);
-        Process process = pb.start();
-
-        // Gửi JSON qua stdin
-        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
-            System.out.println("Sending tasks JSON via stdin: " + tasksJson);
-            writer.write(tasksJson);
-            writer.flush();
-        }
-
-        // Đọc stdout từ Python script
-        BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        StringBuilder outputBuilder = new StringBuilder();
-        String line;
-        while ((line = stdoutReader.readLine()) != null) {
-            outputBuilder.append(line).append("\n");
-        }
-
-        // Đọc stderr từ Python script
-        BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-        StringBuilder errorBuilder = new StringBuilder();
-        String errLine;
-        while ((errLine = stderrReader.readLine()) != null) {
-            errorBuilder.append(errLine).append("\n");
-        }
-
-        // Chờ quá trình Python script hoàn thành
-        int exitCode = process.waitFor();
-
-        if (exitCode == 0) {
-            // Parse JSON từ stdout
-            String jsonStr = outputBuilder.toString().trim();
-            System.out.println("Python script output: " + jsonStr);
-
-            // Loại bỏ phần mở đầu "```json" và kết thúc "```" nếu có
-            if (jsonStr.startsWith("```json")) {
-                jsonStr = jsonStr.substring("```json".length()).trim();
+    private List<AIPopupPanel.SuggestedTask> executePythonScript(String tasksJson) {
+        List<AIPopupPanel.SuggestedTask> tasks = new ArrayList<>();
+        String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
+    
+        try {
+            // Tạo ProcessBuilder để chạy Python script
+            ProcessBuilder pb = new ProcessBuilder("python3", pythonScriptPath);
+            Process process = pb.start();
+    
+            // Gửi JSON qua stdin
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
+                System.out.println("Sending tasks JSON via stdin: " + tasksJson);
+                writer.write(tasksJson);
+                writer.flush();
             }
-            if (jsonStr.endsWith("```")) {
-                jsonStr = jsonStr.substring(0, jsonStr.lastIndexOf("```")).trim();
+    
+            // Đọc stdout từ Python script
+            BufferedReader stdoutReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder outputBuilder = new StringBuilder();
+            String line;
+            while ((line = stdoutReader.readLine()) != null) {
+                outputBuilder.append(line).append("\n");
             }
-
-            // Parse JSON nếu chuỗi là một mảng JSON
-            JSONArray tasksArray = new JSONArray(jsonStr);
-            for (int i = 0; i < tasksArray.length(); i++) {
-                JSONObject taskObj = tasksArray.getJSONObject(i);
-                String time = taskObj.optString("time", "");
-                String task = taskObj.optString("task", "");
-                String notes = taskObj.optString("description", ""); // Dùng "description" từ API
-
-                SuggestedTask st = new SuggestedTask(time, task, notes);
-                tasks.add(st);
+    
+            // Đọc stderr từ Python script
+            BufferedReader stderrReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+            StringBuilder errorBuilder = new StringBuilder();
+            String errLine;
+            while ((errLine = stderrReader.readLine()) != null) {
+                errorBuilder.append(errLine).append("\n");
             }
-        } else {
-            System.err.println("Python script exited with code: " + exitCode);
-            if (errorBuilder.length() > 0) {
-                System.err.println("STDERR: " + errorBuilder.toString());
+    
+            // Chờ quá trình Python script hoàn thành
+            int exitCode = process.waitFor();
+    
+            if (exitCode == 0) {
+                // Parse JSON từ stdout
+                String jsonStr = outputBuilder.toString().trim();
+                System.out.println("Python script output: " + jsonStr);
+    
+                // Loại bỏ phần mở đầu "```json" và kết thúc "```" nếu có
+                if (jsonStr.startsWith("```json")) {
+                    jsonStr = jsonStr.substring("```json".length()).trim();
+                }
+                if (jsonStr.endsWith("```")) {
+                    jsonStr = jsonStr.substring(0, jsonStr.lastIndexOf("```")).trim();
+                }
+    
+                // Parse JSON nếu chuỗi là một mảng JSON
+                JSONArray tasksArray = new JSONArray(jsonStr);
+                for (int i = 0; i < tasksArray.length(); i++) {
+                    JSONObject taskObj = tasksArray.getJSONObject(i);
+                    String title = taskObj.optString("title", "");
+                    String description = taskObj.optString("description", "");
+    
+                    // Parse tagsname as a list of strings
+                    List<String> tagsname = new ArrayList<>();
+                    JSONArray tagsArray = taskObj.optJSONArray("tagsname");
+                    if (tagsArray != null) {
+                        for (int j = 0; j < tagsArray.length(); j++) {
+                            tagsname.add(tagsArray.getString(j));
+                        }
+                    }
+    
+                    String priority = taskObj.optString("priority", "");
+                    String dueDate = taskObj.has("dueDate") ? taskObj.getJSONObject("dueDate").optString("seconds", "N/A") : "N/A";
+    
+                    AIPopupPanel.SuggestedTask st = new AIPopupPanel.SuggestedTask(title, description, tagsname, priority, dueDate);
+                    tasks.add(st);
+                }
+            } else {
+                System.err.println("Python script exited with code: " + exitCode);
+                if (errorBuilder.length() > 0) {
+                    System.err.println("STDERR: " + errorBuilder.toString());
+                }
             }
+    
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-    } catch (Exception e) {
-        e.printStackTrace();
+    
+        return tasks;
     }
-
-    return tasks;
-}
+    
 
 
 
@@ -487,12 +499,12 @@ private List<SuggestedTask> executePythonScript(String tasksJson) {
    
     
 
-public static class AIPopupPanel extends JPanel {
+ public static  class AIPopupPanel extends JPanel {
         private JPanel tasksContainer; // Panel chứa danh sách tasks
     
         public AIPopupPanel() {
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-            setBackground(new Color(30, 30, 30)); // Nền giống workspace
+            setBackground(new Color(30, 30, 30)); // nền giống workspace
     
             // Tiêu đề (header)
             JLabel headerLabel = new JLabel("HERE ARE SUGGESTIONS BASED ON YOUR HABITS", JLabel.CENTER);
@@ -520,11 +532,11 @@ public static class AIPopupPanel extends JPanel {
             setPreferredSize(new Dimension(300, 400));
         }
     
-        public boolean loadTasks(List<SuggestedTask> tasks) {
+        public boolean loadTasks(List<SuggestedTask> suggestedTasks) {
             // Xóa các task cũ nếu có
             tasksContainer.removeAll();
     
-            if (tasks.isEmpty()) {
+            if (suggestedTasks.isEmpty()) {
                 // Không có tasks -> Hiển thị thông báo
                 JLabel noTasksLabel = new JLabel("No suggestions available.", JLabel.CENTER);
                 noTasksLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
@@ -533,36 +545,66 @@ public static class AIPopupPanel extends JPanel {
     
                 tasksContainer.revalidate();
                 tasksContainer.repaint();
-                System.out.println("No tasks were fetched from Python script.");
                 return false; // Không load được task
             } else {
                 // Hiển thị các tasks dạng panel
-                for (SuggestedTask t : tasks) {
+                for (SuggestedTask t : suggestedTasks) {
                     tasksContainer.add(Box.createVerticalStrut(10));
     
                     // Tạo panel cho một task
                     JPanel taskPanel = new JPanel();
                     taskPanel.setLayout(new BoxLayout(taskPanel, BoxLayout.Y_AXIS));
-                    taskPanel.setBackground(new Color(50, 50, 50));
-                    taskPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                    taskPanel.setBackground(new Color(45, 45, 45));
+                    taskPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                    taskPanel.setMaximumSize(new Dimension(600, 200));
     
-                    JLabel timeLabel = new JLabel("Time: " + t.time);
-                    timeLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                    timeLabel.setForeground(Color.WHITE);
+                    JLabel titleLabel = new JLabel(t.title);
+                    titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                    titleLabel.setForeground(Color.WHITE);
     
-                    JLabel taskLabel = new JLabel("Task: " + t.task);
-                    taskLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                    taskLabel.setForeground(Color.WHITE);
+                    JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + t.description + "</div></html>");
+                    descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                    descriptionLabel.setForeground(Color.LIGHT_GRAY);
     
-                    JLabel notesLabel = new JLabel("Notes: " + t.description);
-                    notesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                    notesLabel.setForeground(Color.LIGHT_GRAY);
+                    JLabel dueDateLabel = new JLabel("Due: " + (t.dueDate != null ? t.dueDate : "N/A"));
+                    dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    dueDateLabel.setForeground(Color.GRAY);
     
-                    taskPanel.add(timeLabel);
+                    JLabel priorityLabel = new JLabel("Priority: " + t.priority);
+                    priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    priorityLabel.setForeground(getPriorityColor(t.priority));
+    
+                    JPanel tagsPanel = new JPanel();
+                    tagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                    tagsPanel.setBackground(new Color(45, 45, 45));
+    
+                    if (t.tagsname != null && !t.tagsname.isEmpty()) {
+                        for (String tag : t.tagsname) {
+                            JLabel tagLabel = new JLabel(tag);
+                            tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                            tagLabel.setForeground(Color.WHITE);
+                            tagLabel.setOpaque(true);
+                            tagLabel.setBackground(new Color(0, 0, 128));
+                            tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                            tagsPanel.add(tagLabel);
+                        }
+                    } else {
+                        JLabel noTagLabel = new JLabel("No Tags");
+                        noTagLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                        noTagLabel.setForeground(Color.GRAY);
+                        tagsPanel.add(noTagLabel);
+                    }
+    
+                    // Add components to the task panel
+                    taskPanel.add(titleLabel);
                     taskPanel.add(Box.createVerticalStrut(5));
-                    taskPanel.add(taskLabel);
+                    taskPanel.add(descriptionLabel);
                     taskPanel.add(Box.createVerticalStrut(5));
-                    taskPanel.add(notesLabel);
+                    taskPanel.add(dueDateLabel);
+                    taskPanel.add(Box.createVerticalStrut(5));
+                    taskPanel.add(priorityLabel);
+                    taskPanel.add(Box.createVerticalStrut(5));
+                    taskPanel.add(tagsPanel);
     
                     tasksContainer.add(taskPanel);
                 }
@@ -574,19 +616,37 @@ public static class AIPopupPanel extends JPanel {
             }
         }
     
+        private Color getPriorityColor(String priority) {
+            switch (priority.toUpperCase()) {
+                case "HIGH":
+                    return Color.RED;
+                case "MEDIUM":
+                    return Color.ORANGE;
+                case "LOW":
+                    return Color.GREEN;
+                default:
+                    return Color.GRAY;
+            }
+        }
+    
         // Lớp chứa dữ liệu cho một suggested task
         static class SuggestedTask {
-            String time;
-            String task;
+            String title;
             String description;
+            List<String> tagsname;
+            String priority;
+            String dueDate;
     
-            SuggestedTask(String time, String task, String notes) {
-                this.time = time;
-                this.task = task;
-                this.description = notes;
+            SuggestedTask(String title, String description, List<String> tagsname, String priority, String dueDate) {
+                this.title = title;
+                this.description = description;
+                this.tagsname = tagsname;
+                this.priority = priority;
+                this.dueDate = dueDate;
             }
         }
     }
+    
     
     
 
@@ -734,9 +794,8 @@ private void openAddTaskDialog(String workspaceId) {
     gbc.gridx = 1;
     formPanel.add(statusCombo, gbc);
 
-    // Tags (similar to existing code)
+    // Tags
     JLabel tagsLabel = new JLabel("Tags:");
-    // Fetch existing workspace tags
     List<String> existingTags = fetchWorkspaceTags(newTask.getWorkspaceId());
     DefaultListModel<String> tagListModel = new DefaultListModel<>();
     for (String tag : existingTags) {
@@ -771,83 +830,55 @@ private void openAddTaskDialog(String workspaceId) {
     // Add form panel to dialog
     addDialog.add(formPanel, BorderLayout.CENTER);
 
-    // Create Save button for adding a new task
+    // Create Save and Gen AI buttons
     JButton saveButton = new JButton("Save");
-    addDialog.getRootPane().setDefaultButton(saveButton);
+    JButton genAIButton = new JButton("Gen AI");
 
-    // Action listener for adding a new tag
-    addTagButton.addActionListener(e -> {
-        String newTag = newTagField.getText().trim();
-        if (!newTag.isEmpty() && !tagListModel.contains(newTag)) {
-            tagListModel.addElement(newTag);
-            existingTagsList.setSelectedValue(newTag, true);
-            newTagField.setText("");
-        } else if (tagListModel.contains(newTag)) {
-            JOptionPane.showMessageDialog(addDialog, "Tag already exists in workspace.", "Duplicate Tag", JOptionPane.WARNING_MESSAGE);
-        }
-    });
-
+    // Action listener for Save button
     saveButton.addActionListener(e -> {
         String newTitle = titleField.getText().trim();
         String newDescription = descriptionArea.getText().trim();
         String newDueDate = dueDateField.getText().trim();
         String newPriority = ((Priority) priorityCombo.getSelectedItem()).name();
         String newStatus = ((Status) statusCombo.getSelectedItem()).name();
-
-        // Get selected existing tags
         List<String> selectedExistingTags = existingTagsList.getSelectedValuesList();
-
-        // Get any new tag added during this session
         String newTag = newTagField.getText().trim();
+
         if (!newTag.isEmpty() && !tagListModel.contains(newTag)) {
             selectedExistingTags.add(newTag);
         }
 
-        // Remove duplicates if any
         List<String> uniqueTags = selectedExistingTags.stream().distinct().collect(Collectors.toList());
 
-        // Validate input (optional)
         if (newTitle.isEmpty()) {
             JOptionPane.showMessageDialog(addDialog, "Title cannot be empty.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Create a Firestore reference for the workspace
-        Firestore db = FirestoreClient.getFirestore();
-        DocumentReference workspaceRef = db.collection("Workspace").document(workspaceId);
-        
-        // Create an initial Task
-        Task initialTask = new Task();
-        initialTask.setTaskID(UUID.randomUUID().toString());
-        initialTask.setTitle("First Task");
-        initialTask.setDescription("This is the first task and I'm excited");
-        initialTask.setPriority(Priority.HIGH);
-        initialTask.setStatus(Status.New);
-        initialTask.setTagsname(new ArrayList<>()); // Adding a tag
-        initialTask.setAssigneesIds(new ArrayList<>()); // Empty assignees list initially
-        initialTask.setReminderIds(new ArrayList<>()); // Empty reminder list initially
-        initialTask.setWorkspaceId(workspaceId);
-        initialTask.setDueDate(new Date()); // Set the due date to the current date or modify accordingly
-        
-        // Save the Task into the subcollection under the workspace document
-        CollectionReference tasksRef = workspaceRef.collection("Task");
-        tasksRef.document(initialTask.getTaskID()).set(initialTask);
+        saveTaskChanges(newTask, newTitle, newDescription, newDueDate, newPriority, newStatus, uniqueTags);
 
-        // Save the new task to Firestore
-        saveTaskChanges(initialTask, newTitle, newDescription, newDueDate, newPriority, newStatus, uniqueTags);
-
-        // Close the dialog
         addDialog.dispose();
     });
 
-    // Add Save button to dialog
+    // Action listener for Gen AI button
+    genAIButton.addActionListener(e -> {
+        System.out.println("Gen AI button clicked!");
+        // Add logic for Gen AI here
+    });
+
+    // Add buttons to button panel
     JPanel buttonPanel = new JPanel();
+    buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+    buttonPanel.add(genAIButton);
     buttonPanel.add(saveButton);
+
+    // Add button panel to dialog
     addDialog.add(buttonPanel, BorderLayout.SOUTH);
 
     // Show the dialog
     addDialog.setVisible(true);
 }
+
 
     private void createTaskTile(Task task, JPanel panel, String userRole) {
         // Create a task tile (a panel for each task)
