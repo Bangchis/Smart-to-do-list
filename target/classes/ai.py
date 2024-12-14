@@ -3,18 +3,17 @@ import sys
 import json
 
 
-def remove_fields_from_json_array(json_array_string):
+def remove_fields_from_json_array(json_array):
     """
-    Loại bỏ các trường 'taskID', 'status', và 'workspaceId' khỏi mỗi đối tượng trong một mảng JSON.
+    Loại bỏ các trường không cần thiết khỏi mỗi đối tượng trong một mảng JSON.
 
     Args:
-        json_array_string: Chuỗi JSON biểu diễn một mảng các đối tượng.
+        json_array: Một danh sách các đối tượng JSON.
 
     Returns:
-        Một chuỗi JSON mới biểu diễn mảng đã được xử lý, hoặc None nếu có lỗi.
+        Danh sách mới đã được loại bỏ các trường không cần thiết.
     """
     try:
-        json_array = json.loads(json_array_string)
         cleaned_json_array = []
 
         for item in json_array:
@@ -24,93 +23,73 @@ def remove_fields_from_json_array(json_array_string):
                     del cleaned_item[field]
             cleaned_json_array.append(cleaned_item)
 
-        # trả về chuỗi json đã format
-        return json.dumps(cleaned_json_array, indent=2)
-    except json.JSONDecodeError:
-        print("Lỗi: Chuỗi JSON không hợp lệ.")
-        return None
+        return cleaned_json_array
     except Exception as e:
-        print(f"Lỗi không xác định: {e}")
-        return None
+        print(f"Lỗi không xác định khi xử lý JSON: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
-# # Ví dụ sử dụng
-# json_string = """
-# [
-#     {
-#         "reminderIds": [],
-#         "description": "fsdaf",
-#         "assigneesIds": [],
-#         "tagsname": [
-#             "Personal",
-#             "thang bang ngu"
-#         ],
-#         "priority": "HIGH",
-#         "title": "đi chơi với hằng lúc 8h thứ 3 tuần sau",
-#         "taskID": "454afcf4-2a1c-4159-ad4a-3493f018bbd9",
-#         "status": "New",
-#         "workspaceId": "d68bbe29-5915-4e05-9aa8-76ee68094fd4"
-#     },
-#     {
-#         "reminderIds": [],
-#         "dueDate": {
-#             "seconds": 1733504400,
-#             "nanos": 0
-#         },
-#         "description": "This is the first task and I'm excited",
-#         "assigneesIds": [],
-#         "tagsname": [
-#             "Personal",
-#             "Gym",
-#             "Work",
-#             "Errand",
-#             "linh tinh",
-#             "thang ngu"
-#         ],
-#         "priority": "HIGH",
-#         "title": "go to the gym 5th time",
-#         "taskID": "4692b906-3fc4-42f5-b19d-338534efb7b3",
-#         "status": "New",
-#         "workspaceId": "d68bbe29-5915-4e05-9aa8-76ee68094fd4"
-#     }
-# ]
-# """
+def configure_genai():
+    """
+    Thiết lập cấu hình cho API Generative AI.
+    """
+    try:
+        genai.configure(api_key="AIzaSyDPGNrIoFWJqKfPgTocPqZBCg39mEXe4yA")
+    except Exception as e:
+        print(f"Error configuring Generative AI: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
-try:
-    # Đọc đầu vào từ stdin
-    input_data = sys.stdin.read()
-    tasks = json.loads(input_data)
+def main():
+    try:
+        # Đọc đầu vào từ stdin
+        input_data = sys.stdin.read().strip()
+        if not input_data:
+            print("Error: No input data provided", file=sys.stderr)
+            sys.exit(1)
 
-except json.JSONDecodeError as e:
-    print("Failed to parse JSON:", str(e), file=sys.stderr)
-    sys.exit(1)
-except Exception as e:
-    print("Error:", str(e), file=sys.stderr)
-    sys.exit(1)
+        # Parse JSON từ đầu vào
+        try:
+            tasks = json.loads(input_data)
+        except json.JSONDecodeError as e:
+            print("Failed to parse JSON:", str(e), file=sys.stderr)
+            sys.exit(1)
 
-# Thiết lập cấu hình API Generative AI
-genai.configure(api_key="AIzaSyDPGNrIoFWJqKfPgTocPqZBCg39mEXe4yA")
+        # Loại bỏ các trường không cần thiết khỏi JSON
+        cleaned_json = remove_fields_from_json_array(tasks)
 
-# Định nghĩa prompt
-based = """Hiện tại chúng tôi đang cần gợi ý các nhiệm vụ(task) cho người dùng ứng dựng smart-to-do-list của chúng tôi,
-chúng tôi sẽ cung cấp cho bạn lịch sử task mà người dùng tạo nên dưới dạng 1 chuỗi json; trong từng json sẽ có chứa các field như sau: "title","priority","tagsname","dueDate", "description",
-việc của bạn là dựa vào lịch sử đó và đưa ra gợi ý vài tasks cho tôi. Lưu ý,  người dùng là một học sinh bình thường trong giai đoạn ôn thi. Tôi muốn bạn trả ra kết quả dưới dạng 1 chuỗi json và trong từng json có các field:"title","priority","tagsname","dueDate", "description".
-. Dưới đây là lịch sử các task của người dùng ở dạng 1 chuỗi json (sẽ có thể có một số field vô nghĩa, và riêng ở field dueDate bạn hãy gán nó với một Json object có dạng như này: "dueDate": { "seconds": 1734800400,
-      "nanos": 0}, đây là cách thời gian của tôi được lưu trong cơ sở dữ liệu firebase) :
-  
-  
-"""
-cleaned_json = remove_fields_from_json_array(tasks)
-# Tổng hợp lịch sử task
+        # Tạo prompt cho Generative AI
+        based = (
+            "Hiện tại chúng tôi đang cần gợi ý các nhiệm vụ (task) cho người dùng ứng dụng smart-to-do-list của chúng tôi, "
+            "chúng tôi sẽ cung cấp cho bạn lịch sử task mà người dùng tạo nên dưới dạng 1 chuỗi JSON; trong từng JSON sẽ có chứa các trường: "
+            '"title","priority","tagsname","dueDate", "description". '
+            "Việc của bạn là dựa vào lịch sử đó và đưa ra gợi ý vài task mới. "
+            "Lưu ý, người dùng là một học sinh bình thường trong giai đoạn ôn thi. "
+            "Tôi muốn bạn trả ra kết quả dưới dạng một chuỗi JSON và trong từng JSON có các trường: "
+            '"title","priority","tagsname","dueDate", "description". '
+            "Dưới đây là lịch sử các task của người dùng; lưu ý kết quả của bạn chỉ cầ json, và trong trường tagsname của mỗi phần tử đều có thêm thể loại Personal, và các tagsname là tiếng anhanh:"
+        )
+        prompt = based + "\n" + json.dumps(cleaned_json, indent=2)
 
-prompt = based + str(cleaned_json)
+        # Cấu hình Generative AI
+        configure_genai()
 
-# Gọi Generative AI để tạo nội dung
-print("Calling Generative AI API...", file=sys.stderr)
-model = genai.GenerativeModel("gemini-1.5-pro")
-response = model.generate_content(prompt)
+        # Gọi API Generative AI
+        model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        response = model.generate_content(prompt)
 
-# In kết quả từ API
+        # Kiểm tra phản hồi từ API
+        if not hasattr(response, "text") or not response.text.strip():
+            print("Error: API response is empty", file=sys.stderr)
+            sys.exit(1)
 
-print(response.text)
+        # In kết quả từ API ra stdout
+        print(response.text.strip())
+
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
