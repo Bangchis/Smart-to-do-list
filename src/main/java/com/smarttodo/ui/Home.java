@@ -556,478 +556,623 @@ private JPanel createWorkspacePanel(String workspaceId) {
             return workspaceTasksPanels.get(workspaceId);
         }
 
-        private void reloadWorkspaceTasks(String workspaceId, JPanel tasksPanel, String userRole) {
-            Firestore db = FirestoreClient.getFirestore();
-            CollectionReference tasksRef = db.collection("Workspace").document(workspaceId).collection("Task");
-        
-            tasksRef.get().addListener(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        ApiFuture<QuerySnapshot> future = tasksRef.get();
-                        QuerySnapshot querySnapshot = future.get();
-        
-                        SwingUtilities.invokeLater(() -> {
-                            tasksPanel.removeAll(); // Xóa các task cũ khỏi giao diện
-        
-                            if (querySnapshot != null && !querySnapshot.isEmpty()) {
-                                for (QueryDocumentSnapshot document : querySnapshot) {
-                                    Task task = document.toObject(Task.class);
-                                    createTaskTile(task, tasksPanel, userRole);
-                                                                    }
-                                                                } else {
-                                                                    JLabel noTasksLabel = new JLabel("No tasks available for this workspace.", JLabel.CENTER);
-                                                                    noTasksLabel.setFont(new Font("Segoe UI", Font.ITALIC, 18));
-                                                                    noTasksLabel.setForeground(Color.GRAY);
-                                                                    tasksPanel.add(noTasksLabel);
+        private static void reloadWorkspaceTasks(String workspaceId, JPanel tasksPanel, String userRole) {
+                    Firestore db = FirestoreClient.getFirestore();
+                    CollectionReference tasksRef = db.collection("Workspace").document(workspaceId).collection("Task");
+                
+                    tasksRef.get().addListener(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                ApiFuture<QuerySnapshot> future = tasksRef.get();
+                                QuerySnapshot querySnapshot = future.get();
+                
+                                SwingUtilities.invokeLater(() -> {
+                                    tasksPanel.removeAll(); // Xóa các task cũ khỏi giao diện
+                
+                                    if (querySnapshot != null && !querySnapshot.isEmpty()) {
+                                        for (QueryDocumentSnapshot document : querySnapshot) {
+                                            Task task = document.toObject(Task.class);
+                                            createTaskTile(task, tasksPanel, userRole);
+                                                                            }
+                                                                        } else {
+                                                                            JLabel noTasksLabel = new JLabel("No tasks available for this workspace.", JLabel.CENTER);
+                                                                            noTasksLabel.setFont(new Font("Segoe UI", Font.ITALIC, 18));
+                                                                            noTasksLabel.setForeground(Color.GRAY);
+                                                                            tasksPanel.add(noTasksLabel);
+                                                                        }
+                                                    
+                                                                        tasksPanel.revalidate();
+                                                                        tasksPanel.repaint();
+                                                                    });
+                                                                } catch (Exception ex) {
+                                                                    ex.printStackTrace();
+                                                                    JOptionPane.showMessageDialog(null, "Error reloading tasks: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                                                                 }
-                                            
-                                                                tasksPanel.revalidate();
-                                                                tasksPanel.repaint();
-                                                            });
-                                                        } catch (Exception ex) {
-                                                            ex.printStackTrace();
-                                                            JOptionPane.showMessageDialog(null, "Error reloading tasks: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-                                                        }
+                                                            }
+                                                        }, null);
                                                     }
-                                                }, null);
-                                            }
-                                            
-                                            
-                                            public boolean loadTasks(List<SuggestedTask> suggestedTasks, String workspaceId) {
-                                                // Xóa các task cũ nếu có
-                                                tasksContainer.removeAll();
-                                            
-                                                if (suggestedTasks.isEmpty()) {
-                                                    // Không có tasks -> Hiển thị thông báo
-                                                    JLabel noTasksLabel = new JLabel("No suggestions available.", JLabel.CENTER);
-                                                    noTasksLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-                                                    noTasksLabel.setForeground(Color.WHITE);
-                                                    tasksContainer.add(noTasksLabel);
-                                            
-                                                    tasksContainer.revalidate();
-                                                    tasksContainer.repaint();
-                                                    return false; // Không load được task
-                                                } else {
-                                                    // Hiển thị các tasks dạng panel
-                                                    for (SuggestedTask t : suggestedTasks) {
-                                                        tasksContainer.add(Box.createVerticalStrut(10));
-                                            
-                                                        // Tạo panel chính cho task
-                                                        JPanel taskPanel = new JPanel();
-                                                        taskPanel.setLayout(new BorderLayout());
-                                                        taskPanel.setBackground(new Color(45, 45, 45));
-                                                        taskPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
-                                                        taskPanel.setMaximumSize(new Dimension(800, 150)); // Đặt chiều cao tăng lên
-                                                        taskPanel.setPreferredSize(new Dimension(800, 150)); // Đảm bảo kích thước ổn định
-                                            
-                                                        // Tạo panel trái chứa thông tin task
-                                                        JPanel taskInfoPanel = new JPanel();
-                                                        taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS));
-                                                        taskInfoPanel.setBackground(new Color(45, 45, 45));
-                                                        taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding bên trong
-                                            
-                                                        JLabel titleLabel = new JLabel(t.title);
-                                                        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                                                        titleLabel.setForeground(Color.WHITE);
-                                            
-                                                        JLabel descriptionLabel = new JLabel("<html><div style='width: 600px;'>" + t.description + "</div></html>");
-                                                        descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                                                        descriptionLabel.setForeground(Color.LIGHT_GRAY);
-                                            
-                                                        JLabel dueDateLabel = new JLabel("Due: " + (t.dueDate != null ? t.dueDate : "N/A"));
-                                                        dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                        dueDateLabel.setForeground(Color.GRAY);
-                                            
-                                                        JLabel priorityLabel = new JLabel("Priority: " + t.priority);
-                                                        priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                        priorityLabel.setForeground(getPriorityColor(t.priority));
-                                            
-                                                        JPanel tagsPanel = new JPanel();
-                                                        tagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                                                        tagsPanel.setBackground(new Color(45, 45, 45));
-                                                        tagsPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0)); // Thêm padding giữa tags và các thành phần khác
-                                            
-                                                        if (t.tagsname != null && !t.tagsname.isEmpty()) {
-                                                            for (String tag : t.tagsname) {
-                                                                JLabel tagLabel = new JLabel(tag);
-                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                tagLabel.setForeground(Color.WHITE);
-                                                                tagLabel.setOpaque(true);
-                                                                tagLabel.setBackground(new Color(0, 0, 128));
-                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                                                                tagsPanel.add(tagLabel);
-                                                            }
-                                                        } else {
-                                                            JLabel noTagLabel = new JLabel("No Tags");
-                                                            noTagLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-                                                            noTagLabel.setForeground(Color.GRAY);
-                                                            tagsPanel.add(noTagLabel);
-                                                        }
-                                            
-                                                        // Thêm thông tin task vào panel trái
-                                                        taskInfoPanel.add(titleLabel);
-                                                        taskInfoPanel.add(Box.createVerticalStrut(5));
-                                                        taskInfoPanel.add(descriptionLabel);
-                                                        taskInfoPanel.add(Box.createVerticalStrut(5));
-                                                        taskInfoPanel.add(dueDateLabel);
-                                                        taskInfoPanel.add(Box.createVerticalStrut(5));
-                                                        taskInfoPanel.add(priorityLabel);
-                                                        taskInfoPanel.add(Box.createVerticalStrut(5));
-                                                        taskInfoPanel.add(tagsPanel);
-                                            
-                                                        // Tạo nút "+"
-                                                        JButton addButton = new JButton("+");
-                                                        addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                                                        addButton.setForeground(Color.WHITE);
-                                                        addButton.setBackground(new Color(0, 128, 0)); // Màu xanh
-                                                        addButton.setFocusPainted(false);
-                                                        addButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                                                        addButton.setPreferredSize(new Dimension(40, 40)); // Kích thước nút cộng
-                                            
-                                                        addButton.addActionListener(e -> {
-                                                            System.out.println("Add button clicked for task: " + t.title);
-                                                        
-                                                            // Tạo đối tượng Task mới từ SuggestedTask
-                                                            Task newTask = new Task();
-                                                            newTask.setTaskID(UUID.randomUUID().toString());
-                                                            newTask.setTitle(t.title);
-                                                            newTask.setDescription(t.description);
-                                                            newTask.setTagsname(t.tagsname);
-                                                            newTask.setWorkspaceId(workspaceId);
-                                                        
-                                                            // Xử lý priority với chuẩn hóa
-                                                            String normalizedPriority = t.priority.trim().toUpperCase().replace(" ", "_");
-                                                            try {
-                                                                newTask.setPriority(Priority.valueOf(normalizedPriority));
-                                                            } catch (IllegalArgumentException ex) {
-                                                                System.err.println("Invalid priority value for task: " + t.priority);
-                                                                JOptionPane.showMessageDialog(null, "Invalid priority value. Cannot add task.", "Error", JOptionPane.ERROR_MESSAGE);
-                                                                return;
-                                                            }
-                                                        
-                                                            // Parse dueDate từ chuỗi
-                                                            try {
-                                                                if (t.dueDate != null) {
-                                                                    long dueDateSeconds = Long.parseLong(t.dueDate);
-                                                                    newTask.setDueDate(new Date(dueDateSeconds * 1000));
-                                                                }
-                                                            } catch (NumberFormatException ex) {
-                                                                System.err.println("Error parsing due date for task: " + t.title);
-                                                                newTask.setDueDate(null);
-                                                            }
-                                                        
-                                                            // Lưu task vào Firestore
-                                                            saveTaskChanges(
-                                                                newTask,
-                                                                newTask.getTitle(),
-                                                                newTask.getDescription(),
-                                                                newTask.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(newTask.getDueDate()) : "",
-                                                                newTask.getPriority().toString(),
-                                                                "New",
-                                                                newTask.getTagsname()
-                                                            );
-                                                        
-                                                            // Xóa task khỏi giao diện AI Popup
-                                                            tasksContainer.remove(taskPanel);
+                                                    
+                                                    
+                                                    public boolean loadTasks(List<SuggestedTask> suggestedTasks, String workspaceId) {
+                                                        // Xóa các task cũ nếu có
+                                                        tasksContainer.removeAll();
+                                                    
+                                                        if (suggestedTasks.isEmpty()) {
+                                                            // Không có tasks -> Hiển thị thông báo
+                                                            JLabel noTasksLabel = new JLabel("No suggestions available.", JLabel.CENTER);
+                                                            noTasksLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+                                                            noTasksLabel.setForeground(Color.WHITE);
+                                                            tasksContainer.add(noTasksLabel);
+                                                    
                                                             tasksContainer.revalidate();
                                                             tasksContainer.repaint();
-                                                        
-                                                            SwingUtilities.invokeLater(() -> {
-                                                                // Lấy tasksPanel từ HashMap
-                                                                JPanel tasksPanel = workspaceTasksPanels.get(workspaceId);
-                                                                if (tasksPanel != null) {
-                                                                    reloadWorkspaceTasks(workspaceId, tasksPanel, "Owner"); // Gọi phương thức từ instance hiện tại
+                                                            return false; // Không load được task
+                                                        } else {
+                                                            // Hiển thị các tasks dạng panel
+                                                            for (SuggestedTask t : suggestedTasks) {
+                                                                tasksContainer.add(Box.createVerticalStrut(10));
+                                                    
+                                                                // Tạo panel chính cho task
+                                                                JPanel taskPanel = new JPanel();
+                                                                taskPanel.setLayout(new BorderLayout());
+                                                                taskPanel.setBackground(new Color(45, 45, 45));
+                                                                taskPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                                                                taskPanel.setMaximumSize(new Dimension(800, 150)); // Đặt chiều cao tăng lên
+                                                                taskPanel.setPreferredSize(new Dimension(800, 150)); // Đảm bảo kích thước ổn định
+                                                    
+                                                                // Tạo panel trái chứa thông tin task
+                                                                JPanel taskInfoPanel = new JPanel();
+                                                                taskInfoPanel.setLayout(new BoxLayout(taskInfoPanel, BoxLayout.Y_AXIS));
+                                                                taskInfoPanel.setBackground(new Color(45, 45, 45));
+                                                                taskInfoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding bên trong
+                                                    
+                                                                JLabel titleLabel = new JLabel(t.title);
+                                                                titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                                                                titleLabel.setForeground(Color.WHITE);
+                                                    
+                                                                JLabel descriptionLabel = new JLabel("<html><div style='width: 600px;'>" + t.description + "</div></html>");
+                                                                descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                                                                descriptionLabel.setForeground(Color.LIGHT_GRAY);
+                                                    
+                                                                JLabel dueDateLabel = new JLabel("Due: " + (t.dueDate != null ? t.dueDate : "N/A"));
+                                                                dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                dueDateLabel.setForeground(Color.GRAY);
+                                                    
+                                                                JLabel priorityLabel = new JLabel("Priority: " + t.priority);
+                                                                priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                priorityLabel.setForeground(getPriorityColor(t.priority));
+                                                    
+                                                                JPanel tagsPanel = new JPanel();
+                                                                tagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                                                                tagsPanel.setBackground(new Color(45, 45, 45));
+                                                                tagsPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0)); // Thêm padding giữa tags và các thành phần khác
+                                                    
+                                                                if (t.tagsname != null && !t.tagsname.isEmpty()) {
+                                                                    for (String tag : t.tagsname) {
+                                                                        JLabel tagLabel = new JLabel(tag);
+                                                                        tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                        tagLabel.setForeground(Color.WHITE);
+                                                                        tagLabel.setOpaque(true);
+                                                                        tagLabel.setBackground(new Color(0, 0, 128));
+                                                                        tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                                                                        tagsPanel.add(tagLabel);
+                                                                    }
                                                                 } else {
-                                                                    System.err.println("Error: Tasks panel for workspace " + workspaceId + " not found.");
+                                                                    JLabel noTagLabel = new JLabel("No Tags");
+                                                                    noTagLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                                                                    noTagLabel.setForeground(Color.GRAY);
+                                                                    tagsPanel.add(noTagLabel);
                                                                 }
-                                                            });
-                                                        });
-                                                        
-                                            
-                                                        // Thêm panel trái vào giữa và nút "+" vào phải
-                                                        taskPanel.add(taskInfoPanel, BorderLayout.CENTER);
-                                                        taskPanel.add(addButton, BorderLayout.EAST);
-                                            
-                                                        // Thêm task panel vào container
-                                                        tasksContainer.add(taskPanel);
-                                                    }
-                                            
-                                                    tasksContainer.add(Box.createVerticalStrut(10));
-                                                    tasksContainer.revalidate();
-                                                    tasksContainer.repaint();
-                                                    return true; // Load thành công
-                                                }
-                                            }
-                                            
-                                                        
-                                    
-                                                        
-                                                        
-                                                                    
-                                            
-                                                            private Color getPriorityColor(String priority) {
-                                                                switch (priority.toUpperCase()) {
-                                                                    case "HIGH":
-                                                                        return Color.RED;
-                                                                    case "MEDIUM":
-                                                                        return Color.ORANGE;
-                                                                    case "LOW":
-                                                                        return Color.GREEN;
-                                                                    default:
-                                                                        return Color.GRAY;
-                                                                }
-                                                            }
-                                                        
-                                                            // Lớp chứa dữ liệu cho một suggested task
-                                                            static class SuggestedTask {
-                                                                String title;
-                                                                String description;
-                                                                List<String> tagsname;
-                                                                String priority;
-                                                                String dueDate;
-                                                        
-                                                                SuggestedTask(String title, String description, List<String> tagsname, String priority, String dueDate) {
-                                                                    this.title = title;
-                                                                    this.description = description;
-                                                                    this.tagsname = tagsname;
-                                                                    this.priority = priority;
-                                                                    this.dueDate = dueDate;
-                                                                }
-                                                            }
-                                                        }
+                                                    
+                                                                // Thêm thông tin task vào panel trái
+                                                                taskInfoPanel.add(titleLabel);
+                                                                taskInfoPanel.add(Box.createVerticalStrut(5));
+                                                                taskInfoPanel.add(descriptionLabel);
+                                                                taskInfoPanel.add(Box.createVerticalStrut(5));
+                                                                taskInfoPanel.add(dueDateLabel);
+                                                                taskInfoPanel.add(Box.createVerticalStrut(5));
+                                                                taskInfoPanel.add(priorityLabel);
+                                                                taskInfoPanel.add(Box.createVerticalStrut(5));
+                                                                taskInfoPanel.add(tagsPanel);
+                                                    
+                                                                // Tạo nút "+"
+                                                                JButton addButton = new JButton("+");
+                                                                addButton.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                                                                addButton.setForeground(Color.WHITE);
+                                                                addButton.setBackground(new Color(0, 128, 0)); // Màu xanh
+                                                                addButton.setFocusPainted(false);
+                                                                addButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                                                                addButton.setPreferredSize(new Dimension(40, 40)); // Kích thước nút cộng
+                                                    
+                                                                addButton.addActionListener(e -> {
+                                                                    System.out.println("Add button clicked for task: " + t.title);
                                                                 
+                                                                    // Tạo đối tượng Task mới từ SuggestedTask
+                                                                    Task newTask = new Task();
+                                                                    newTask.setTaskID(UUID.randomUUID().toString());
+                                                                    newTask.setTitle(t.title);
+                                                                    newTask.setDescription(t.description);
+                                                                    newTask.setTagsname(t.tagsname);
+                                                                    newTask.setWorkspaceId(workspaceId);
                                                                 
-                                                                
-                                                            
-                                                                class LoadingSpinner extends JPanel {
-                                                                    private int angle = 0; // Góc xoay hiện tại
-                                                                    private Timer timer;
-                                                                
-                                                                    public LoadingSpinner() {
-                                                                        // Tạo Timer để cập nhật góc xoay và vẽ lại
-                                                                        timer = new Timer(50, e -> {
-                                                                            angle += 10; // Tăng góc xoay
-                                                                            if (angle >= 360) {
-                                                                                angle = 0;
-                                                                            }
-                                                                            repaint(); // Yêu cầu vẽ lại
-                                                                        });
-                                                                        timer.start();
+                                                                    // Xử lý priority với chuẩn hóa
+                                                                    String normalizedPriority = t.priority.trim().toUpperCase().replace(" ", "_");
+                                                                    try {
+                                                                        newTask.setPriority(Priority.valueOf(normalizedPriority));
+                                                                    } catch (IllegalArgumentException ex) {
+                                                                        System.err.println("Invalid priority value for task: " + t.priority);
+                                                                        JOptionPane.showMessageDialog(null, "Invalid priority value. Cannot add task.", "Error", JOptionPane.ERROR_MESSAGE);
+                                                                        return;
                                                                     }
                                                                 
-                                                                    @Override
-                                                                    protected void paintComponent(Graphics g) {
-                                                                        super.paintComponent(g);
-                                                                        Graphics2D g2d = (Graphics2D) g;
+                                                                    // Parse dueDate từ chuỗi
+                                                                    try {
+                                                                        if (t.dueDate != null) {
+                                                                            long dueDateSeconds = Long.parseLong(t.dueDate);
+                                                                            newTask.setDueDate(new Date(dueDateSeconds * 1000));
+                                                                        }
+                                                                    } catch (NumberFormatException ex) {
+                                                                        System.err.println("Error parsing due date for task: " + t.title);
+                                                                        newTask.setDueDate(null);
+                                                                    }
                                                                 
-                                                                        // Chống răng cưa
-                                                                        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                                                    // Lưu task vào Firestore
+                                                                    saveTaskChanges(
+                                                                        newTask,
+                                                                        newTask.getTitle(),
+                                                                        newTask.getDescription(),
+                                                                        newTask.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(newTask.getDueDate()) : "",
+                                                                        newTask.getPriority().toString(),
+                                                                        "New",
+                                                                        newTask.getTagsname()
+                                                                    );
                                                                 
-                                                                        // Lấy kích thước panel
-                                                                        int width = getWidth();
-                                                                        int height = getHeight();
+                                                                    // Xóa task khỏi giao diện AI Popup
+                                                                    tasksContainer.remove(taskPanel);
+                                                                    tasksContainer.revalidate();
+                                                                    tasksContainer.repaint();
                                                                 
-                                                                        // Tính tâm và bán kính
-                                                                        int centerX = width / 2;
-                                                                        int centerY = height / 2;
-                                                                        int radius = Math.min(width, height) / 4;
+                                                                    SwingUtilities.invokeLater(() -> {
+                                                                        // Lấy tasksPanel từ HashMap
+                                                                        JPanel tasksPanel = workspaceTasksPanels.get(workspaceId);
+                                                                        if (tasksPanel != null) {
+                                                                            reloadWorkspaceTasks(workspaceId, tasksPanel, "Owner"); // Gọi phương thức từ instance hiện tại
+                                                                        } else {
+                                                                            System.err.println("Error: Tasks panel for workspace " + workspaceId + " not found.");
+                                                                        }
+                                                                    });
+                                                                });
                                                                 
-                                                                        // Tạo hiệu ứng xoay
-                                                                        g2d.setColor(Color.GRAY);
-                                                                        g2d.setStroke(new BasicStroke(6));
+                                                    
+                                                                // Thêm panel trái vào giữa và nút "+" vào phải
+                                                                taskPanel.add(taskInfoPanel, BorderLayout.CENTER);
+                                                                taskPanel.add(addButton, BorderLayout.EAST);
+                                                    
+                                                                // Thêm task panel vào container
+                                                                tasksContainer.add(taskPanel);
+                                                            }
+                                                    
+                                                            tasksContainer.add(Box.createVerticalStrut(10));
+                                                            tasksContainer.revalidate();
+                                                            tasksContainer.repaint();
+                                                            return true; // Load thành công
+                                                        }
+                                                    }
+                                                    
                                                                 
-                                                                        for (int i = 0; i < 12; i++) {
-                                                                            float alpha = (i + angle / 30) % 12 / 12f; // Hiệu ứng mờ dần
-                                                                            g2d.setColor(new Color(0, 0, 0, alpha));
+                                            
                                                                 
-                                                                            double theta = Math.toRadians(i * 30 + angle);
-                                                                            int x1 = (int) (centerX + radius * Math.cos(theta));
-                                                                            int y1 = (int) (centerY + radius * Math.sin(theta));
                                                                 
-                                                                            int x2 = (int) (centerX + (radius - 10) * Math.cos(theta));
-                                                                            int y2 = (int) (centerY + (radius - 10) * Math.sin(theta));
+                                                                            
+                                                    
+                                                                    private Color getPriorityColor(String priority) {
+                                                                        switch (priority.toUpperCase()) {
+                                                                            case "HIGH":
+                                                                                return Color.RED;
+                                                                            case "MEDIUM":
+                                                                                return Color.ORANGE;
+                                                                            case "LOW":
+                                                                                return Color.GREEN;
+                                                                            default:
+                                                                                return Color.GRAY;
+                                                                        }
+                                                                    }
                                                                 
-                                                                            g2d.drawLine(x1, y1, x2, y2);
+                                                                    // Lớp chứa dữ liệu cho một suggested task
+                                                                    static class SuggestedTask {
+                                                                        String title;
+                                                                        String description;
+                                                                        List<String> tagsname;
+                                                                        String priority;
+                                                                        String dueDate;
+                                                                
+                                                                        SuggestedTask(String title, String description, List<String> tagsname, String priority, String dueDate) {
+                                                                            this.title = title;
+                                                                            this.description = description;
+                                                                            this.tagsname = tagsname;
+                                                                            this.priority = priority;
+                                                                            this.dueDate = dueDate;
                                                                         }
                                                                     }
                                                                 }
-                                                                
-                                                                // Sử dụng LoadingSpinner trong dialog Loading
-                                                                class LoadingDialog extends JDialog {
-                                                                    public LoadingDialog(Frame owner) {
-                                                                        super(owner, "Loading", true);
-                                                                        setLayout(new BorderLayout());
-                                                                
-                                                                        LoadingSpinner spinner = new LoadingSpinner();
-                                                                        spinner.setPreferredSize(new Dimension(100, 100));
-                                                                        add(spinner, BorderLayout.CENTER);
-                                                                
-                                                                        JLabel label = new JLabel("Loading suggestions, please wait...", JLabel.CENTER);
-                                                                        label.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-                                                                        add(label, BorderLayout.SOUTH);
-                                                                
-                                                                        pack();
-                                                                        setLocationRelativeTo(owner);
+                                                                        
+                                                                        
+                                                                        
+                                                                    
+                                                                        class LoadingSpinner extends JPanel {
+                                                                            private int angle = 0; // Góc xoay hiện tại
+                                                                            private Timer timer;
+                                                                        
+                                                                            public LoadingSpinner() {
+                                                                                // Tạo Timer để cập nhật góc xoay và vẽ lại
+                                                                                timer = new Timer(50, e -> {
+                                                                                    angle += 10; // Tăng góc xoay
+                                                                                    if (angle >= 360) {
+                                                                                        angle = 0;
+                                                                                    }
+                                                                                    repaint(); // Yêu cầu vẽ lại
+                                                                                });
+                                                                                timer.start();
+                                                                            }
+                                                                        
+                                                                            @Override
+                                                                            protected void paintComponent(Graphics g) {
+                                                                                super.paintComponent(g);
+                                                                                Graphics2D g2d = (Graphics2D) g;
+                                                                        
+                                                                                // Chống răng cưa
+                                                                                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                                                        
+                                                                                // Lấy kích thước panel
+                                                                                int width = getWidth();
+                                                                                int height = getHeight();
+                                                                        
+                                                                                // Tính tâm và bán kính
+                                                                                int centerX = width / 2;
+                                                                                int centerY = height / 2;
+                                                                                int radius = Math.min(width, height) / 4;
+                                                                        
+                                                                                // Tạo hiệu ứng xoay
+                                                                                g2d.setColor(Color.GRAY);
+                                                                                g2d.setStroke(new BasicStroke(6));
+                                                                        
+                                                                                for (int i = 0; i < 12; i++) {
+                                                                                    float alpha = (i + angle / 30) % 12 / 12f; // Hiệu ứng mờ dần
+                                                                                    g2d.setColor(new Color(0, 0, 0, alpha));
+                                                                        
+                                                                                    double theta = Math.toRadians(i * 30 + angle);
+                                                                                    int x1 = (int) (centerX + radius * Math.cos(theta));
+                                                                                    int y1 = (int) (centerY + radius * Math.sin(theta));
+                                                                        
+                                                                                    int x2 = (int) (centerX + (radius - 10) * Math.cos(theta));
+                                                                                    int y2 = (int) (centerY + (radius - 10) * Math.sin(theta));
+                                                                        
+                                                                                    g2d.drawLine(x1, y1, x2, y2);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        
+                                                                        // Sử dụng LoadingSpinner trong dialog Loading
+                                                                        class LoadingDialog extends JDialog {
+                                                                            public LoadingDialog(Frame owner) {
+                                                                                super(owner, "Loading", true);
+                                                                                setLayout(new BorderLayout());
+                                                                        
+                                                                                LoadingSpinner spinner = new LoadingSpinner();
+                                                                                spinner.setPreferredSize(new Dimension(100, 100));
+                                                                                add(spinner, BorderLayout.CENTER);
+                                                                        
+                                                                                JLabel label = new JLabel("Loading suggestions, please wait...", JLabel.CENTER);
+                                                                                label.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+                                                                                add(label, BorderLayout.SOUTH);
+                                                                        
+                                                                                pack();
+                                                                                setLocationRelativeTo(owner);
+                                                                            }
+                                                                        } 
+                                                                    
+                                                                        
+                                                                    
+                                                                    /**
+                                                                     * Opens a dialog to add a new task with tags.
+                                                                     */
+                                                                    private void openAddTaskDialog(String workspaceId) {
+                                                                        // Create a new task object for the new task
+                                                                        Task newTask = new Task();
+                                                                        newTask.setWorkspaceId(workspaceId); // Provide workspace ID
+                                                                    
+                                                                        // Create a dialog for adding a new task
+                                                                        JDialog addDialog = new JDialog((Frame) null, "Add Task", true);
+                                                                        addDialog.setSize(500, 600);
+                                                                        addDialog.setLocationRelativeTo(null);
+                                                                        addDialog.setLayout(new BorderLayout());
+                                                                    
+                                                                        // Create a panel for form inputs
+                                                                        JPanel formPanel = new JPanel();
+                                                                        formPanel.setLayout(new GridBagLayout());
+                                                                        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                                                                        GridBagConstraints gbc = new GridBagConstraints();
+                                                                        gbc.insets = new Insets(5, 5, 5, 5);
+                                                                        gbc.fill = GridBagConstraints.HORIZONTAL;
+                                                                    
+                                                                        // Title
+                                                                        JLabel titleLabel = new JLabel("Title:");
+                                                                        JTextField titleField = new JTextField(20);
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 0;
+                                                                        formPanel.add(titleLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(titleField, gbc);
+                                                                    
+                                                                        // Description
+                                                                        JLabel descriptionLabel = new JLabel("Description:");
+                                                                        JTextArea descriptionArea = new JTextArea(5, 20);
+                                                                        descriptionArea.setLineWrap(true);
+                                                                        descriptionArea.setWrapStyleWord(true);
+                                                                        JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 1;
+                                                                        formPanel.add(descriptionLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(descriptionScroll, gbc);
+                                                                    
+                                                                        // Due Date
+                                                                        JLabel dueDateLabel = new JLabel("Due Date (yyyy-MM-dd):");
+                                                                        JTextField dueDateField = new JTextField(20);
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 2;
+                                                                        formPanel.add(dueDateLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(dueDateField, gbc);
+                                                                    
+                                                                        // Priority
+                                                                        JLabel priorityLabel = new JLabel("Priority:");
+                                                                        JComboBox<Priority> priorityCombo = new JComboBox<>(Priority.values());
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 3;
+                                                                        formPanel.add(priorityLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(priorityCombo, gbc);
+                                                                    
+                                                                        // Status
+                                                                        JLabel statusLabel = new JLabel("Status:");
+                                                                        JComboBox<Status> statusCombo = new JComboBox<>(Status.values());
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 4;
+                                                                        formPanel.add(statusLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(statusCombo, gbc);
+                                                                    
+                                                                        // Tags
+                                                                        JLabel tagsLabel = new JLabel("Tags:");
+                                                                        List<String> existingTags = fetchWorkspaceTags(newTask.getWorkspaceId());
+                                                                        DefaultListModel<String> tagListModel = new DefaultListModel<>();
+                                                                        for (String tag : existingTags) {
+                                                                            tagListModel.addElement(tag);
+                                                                        }
+                                                                        JList<String> existingTagsList = new JList<>(tagListModel);
+                                                                        existingTagsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                                                                        JScrollPane tagsScrollPane = new JScrollPane(existingTagsList);
+                                                                    
+                                                                        JTextField newTagField = new JTextField(15);
+                                                                        JButton addTagButton = new JButton("Add Tag");
+                                                                    
+                                                                        JPanel tagsPanel = new JPanel(new BorderLayout());
+                                                                        tagsPanel.add(tagsScrollPane, BorderLayout.CENTER);
+                                                                    
+                                                                        JPanel addTagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                                                                        addTagPanel.add(new JLabel("New Tag:"));
+                                                                        addTagPanel.add(newTagField);
+                                                                        addTagPanel.add(addTagButton);
+                                                                        tagsPanel.add(addTagPanel, BorderLayout.SOUTH);
+                                                                    
+                                                                        gbc.gridx = 0;
+                                                                        gbc.gridy = 5;
+                                                                        formPanel.add(tagsLabel, gbc);
+                                                                        gbc.gridx = 1;
+                                                                        formPanel.add(tagsPanel, gbc);
+                                                                    
+                                                                        // Add form panel to dialog
+                                                                        addDialog.add(formPanel, BorderLayout.CENTER);
+                                                                    
+                                                                        // Create Save and Gen AI buttons
+                                                                        JButton saveButton = new JButton("Save");
+                                                                        JButton genAIButton = new JButton("Gen AI");
+                                                                    
+                                                                        // Action listener for Save button
+                                                                        saveButton.addActionListener(e -> {
+                                                                            String newTitle = titleField.getText().trim();
+                                                                            String newDescription = descriptionArea.getText().trim();
+                                                                            String newDueDate = dueDateField.getText().trim();
+
+                                                                            // Chuyển đổi Priority về dạng chuẩn
+                                                                            String selectedPriority = ((Priority) priorityCombo.getSelectedItem()).toString(); // Lấy dạng "High Priority"
+                                                                            String newPriority;
+                                                                            switch (selectedPriority) {
+                                                                                case "High Priority":
+                                                                                    newPriority = "HIGH";
+                                                                                    break;
+                                                                                case "Medium Priority":
+                                                                                    newPriority = "MEDIUM";
+                                                                                    break;
+                                                                                case "Low Priority":
+                                                                                    newPriority = "LOW";
+                                                                                    break;
+                                                                                default:
+                                                                                    JOptionPane.showMessageDialog(addDialog, "Invalid priority value selected.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                                                                                    return;
+                                                                            }
+
+                                                                            // Lấy Status
+                                                                            String newStatus = ((Status) statusCombo.getSelectedItem()).name();
+
+                                                                            // Xử lý Tags
+                                                                            List<String> selectedTags = existingTagsList.getSelectedValuesList();
+                                                                            String newTag = newTagField.getText().trim();
+                                                                            if (!newTag.isEmpty() && !selectedTags.contains(newTag)) {
+                                                                                selectedTags.add(newTag);
+                                                                            }
+
+                                                                            // Kiểm tra trường Title
+                                                                            if (newTitle.isEmpty()) {
+                                                                                JOptionPane.showMessageDialog(addDialog, "Title cannot be empty.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                                                                                return;
+                                                                            }
+
+                                                                            try {
+                                                                                // Lưu task vào Firestore
+                                                                                saveTaskChanges(newTask, newTitle, newDescription, newDueDate, newPriority, newStatus, selectedTags);
+                                                                                addDialog.dispose();
+                                                                                JOptionPane.showMessageDialog(null, "Task saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                                                                            } catch (Exception ex) {
+                                                                                ex.printStackTrace();
+                                                                                JOptionPane.showMessageDialog(addDialog, "Error saving task: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                                                                            }
+                                                                        });
+
+                                                                    
+                                                                        
+                                                                    // Action listener for Gen AI button
+                                                                    // Action listener for Gen AI button
+                                                                            genAIButton.addActionListener(e -> {
+                                                                                String inputTitle = titleField.getText().trim();
+
+                                                                                if (inputTitle.isEmpty()) {
+                                                                                    JOptionPane.showMessageDialog(addDialog, "Title cannot be empty for Gen AI.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                                                                                    return;
+                                                                                }
+
+                                                                                // Tạo JDialog để hiển thị spinner
+                                                                                JDialog loadingDialog = new JDialog((Frame) null, "Generating AI Task", true);
+                                                                                JPanel loadingPanel = new JPanel();
+                                                                                loadingPanel.setLayout(new BorderLayout());
+                                                                                JLabel loadingLabel = new JLabel("Generating task with AI, please wait...", SwingConstants.CENTER);
+                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
+                                                                                spinnerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                                                                                loadingPanel.add(loadingLabel, BorderLayout.NORTH);
+                                                                                loadingPanel.add(spinnerLabel, BorderLayout.CENTER);
+                                                                                loadingDialog.getContentPane().add(loadingPanel);
+                                                                                loadingDialog.setSize(300, 150);
+                                                                                loadingDialog.setLocationRelativeTo(addDialog);
+
+                                                                                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                                                                                    @Override
+                                                                                    protected Void doInBackground() throws Exception {
+                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/addtask_by_ai.py");
+                                                                                        processBuilder.redirectErrorStream(true);
+                                                                                        Process process = processBuilder.start();
+
+                                                                                        // Gửi inputTitle tới script Python qua stdin
+                                                                                        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(process.getOutputStream()))) {
+                                                                                            JSONObject jsonInput = new JSONObject();
+                                                                                            jsonInput.put("title", inputTitle);
+                                                                                            writer.write(jsonInput.toString());
+                                                                                            writer.flush();
+                                                                                        }
+
+                                                                                        // Đọc kết quả JSON từ script Python
+                                                                                        StringBuilder jsonOutput = new StringBuilder();
+                                                                                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                                                                                            String line;
+                                                                                            while ((line = reader.readLine()) != null) {
+                                                                                                jsonOutput.append(line);
+                                                                                            }
+                                                                                        }
+
+                                                                                        // Làm sạch đầu ra JSON
+                                                                                        String rawOutput = jsonOutput.toString().trim();
+                                                                                        System.out.println("Raw API Output: " + rawOutput);
+
+                                                                                        // Loại bỏ các phần không hợp lệ, ví dụ: `"json`
+                                                                                        if (rawOutput.startsWith("```json")) {
+                                                                                            rawOutput = rawOutput.substring(rawOutput.indexOf("{"), rawOutput.lastIndexOf("}") + 1);
+                                                                                        }
+
+                                                                                        System.out.println("Cleaned API Output: " + rawOutput);
+
+                                                                                        // Parse JSON để lấy các trường cần thiết
+                                                                                        JSONObject aiGeneratedTask = new JSONObject(rawOutput);
+                                                                                        String newDescription = aiGeneratedTask.getString("description");
+                                                                                        String newPriority = aiGeneratedTask.getString("priority").toUpperCase();
+
+                                                                                        // Chuyển đổi priority về dạng hợp lệ
+                                                                                        switch (newPriority) {
+                                                                                            case "HIGH":
+                                                                                            case "HIGH PRIORITY":
+                                                                                                newPriority = "HIGH";
+                                                                                                break;
+                                                                                            case "MEDIUM":
+                                                                                            case "MEDIUM PRIORITY":
+                                                                                                newPriority = "MEDIUM";
+                                                                                                break;
+                                                                                            case "LOW":
+                                                                                            case "LOW PRIORITY":
+                                                                                                newPriority = "LOW";
+                                                                                                break;
+                                                                                            default:
+                                                                                                throw new IllegalArgumentException("Invalid priority value: " + newPriority);
+                                                                                        }
+
+                                                                                        // Tags
+                                                                                        JSONArray tagsArray = aiGeneratedTask.getJSONArray("tagsname");
+                                                                                        List<String> tags = new ArrayList<>();
+                                                                                        for (int i = 0; i < tagsArray.length(); i++) {
+                                                                                            tags.add(tagsArray.getString(i));
+                                                                                        }
+
+                                                                                        // Parse dueDate
+                                                                                        JSONObject dueDateJson = aiGeneratedTask.getJSONObject("dueDate");
+                                                                                        long dueDateSeconds = dueDateJson.getLong("seconds");
+                                                                                        Date newDueDate = new Date(dueDateSeconds * 1000);
+
+                                                                                        // Lưu Task vào Firestore
+                                                                                        saveTaskChanges(newTask, inputTitle, newDescription, new SimpleDateFormat("yyyy-MM-dd").format(newDueDate), newPriority, "New", tags);
+                                                                                        return null;
+                                                                                    }
+
+                                                                                    @Override
+                                                                                    protected void done() {
+                                                                                        // Ẩn spinner sau khi hoàn thành
+                                                                                        loadingDialog.dispose();
+
+                                                                                        try {
+                                                                                            get(); // Kiểm tra lỗi trong doInBackground()
+                                                                                            JOptionPane.showMessageDialog(addDialog, "Task generated and saved successfully.", "Gen AI Success", JOptionPane.INFORMATION_MESSAGE);
+                                                                                            addDialog.dispose();
+                                                                                        } catch (Exception ex) {
+                                                                                            ex.printStackTrace();
+                                                                                            JOptionPane.showMessageDialog(addDialog, "Failed to generate task: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                                                                                        }
+                                                                                    }
+                                                                                };
+
+                                                                                // Hiển thị spinner và chạy worker
+                                                                                SwingUtilities.invokeLater(() -> {
+                                                                                    loadingDialog.setVisible(true); // Hiển thị spinner
+                                                                                    worker.execute(); // Bắt đầu xử lý AI
+                                                                                });
+                                                                            });
+
+                                                                    
+                                                                    
+
+                                                                        
+                                                                    
+                                                                        // Add buttons to button panel
+                                                                        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+                                                                        buttonPanel.add(genAIButton);
+                                                                        buttonPanel.add(saveButton);
+                                                                    
+                                                                        // Add button panel to dialog
+                                                                        addDialog.add(buttonPanel, BorderLayout.SOUTH);
+                                                                    
+                                                                        // Show the dialog
+                                                                        addDialog.setVisible(true);
                                                                     }
-                                                                } 
+                                                                    
+                                                                    
                                                             
-                                                                
-                                                            
-                                                            /**
-                                                             * Opens a dialog to add a new task with tags.
-                                                             */
-                                                            private void openAddTaskDialog(String workspaceId) {
-                                                                // Create a new task object for the new task
-                                                                Task newTask = new Task();
-                                                                newTask.setWorkspaceId(workspaceId); // Provide workspace ID
-                                                            
-                                                                // Create a dialog for adding a new task
-                                                                JDialog addDialog = new JDialog((Frame) null, "Add Task", true);
-                                                                addDialog.setSize(500, 600);
-                                                                addDialog.setLocationRelativeTo(null);
-                                                                addDialog.setLayout(new BorderLayout());
-                                                            
-                                                                // Create a panel for form inputs (similar to the edit dialog)
-                                                                JPanel formPanel = new JPanel();
-                                                                formPanel.setLayout(new GridBagLayout());
-                                                                formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-                                                                GridBagConstraints gbc = new GridBagConstraints();
-                                                                gbc.insets = new Insets(5, 5, 5, 5);
-                                                                gbc.fill = GridBagConstraints.HORIZONTAL;
-                                                            
-                                                                // Title
-                                                                JLabel titleLabel = new JLabel("Title:");
-                                                                JTextField titleField = new JTextField(20);
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 0;
-                                                                formPanel.add(titleLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(titleField, gbc);
-                                                            
-                                                                // Description
-                                                                JLabel descriptionLabel = new JLabel("Description:");
-                                                                JTextArea descriptionArea = new JTextArea(5, 20);
-                                                                descriptionArea.setLineWrap(true);
-                                                                descriptionArea.setWrapStyleWord(true);
-                                                                JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 1;
-                                                                formPanel.add(descriptionLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(descriptionScroll, gbc);
-                                                            
-                                                                // Due Date
-                                                                JLabel dueDateLabel = new JLabel("Due Date (yyyy-MM-dd):");
-                                                                JTextField dueDateField = new JTextField(20);
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 2;
-                                                                formPanel.add(dueDateLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(dueDateField, gbc);
-                                                            
-                                                                // Priority
-                                                                JLabel priorityLabel = new JLabel("Priority:");
-                                                                JComboBox<Priority> priorityCombo = new JComboBox<>(Priority.values());
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 3;
-                                                                formPanel.add(priorityLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(priorityCombo, gbc);
-                                                            
-                                                                // Status
-                                                                JLabel statusLabel = new JLabel("Status:");
-                                                                JComboBox<Status> statusCombo = new JComboBox<>(Status.values());
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 4;
-                                                                formPanel.add(statusLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(statusCombo, gbc);
-                                                            
-                                                                // Tags
-                                                                JLabel tagsLabel = new JLabel("Tags:");
-                                                                List<String> existingTags = fetchWorkspaceTags(newTask.getWorkspaceId());
-                                                                DefaultListModel<String> tagListModel = new DefaultListModel<>();
-                                                                for (String tag : existingTags) {
-                                                                    tagListModel.addElement(tag);
-                                                                }
-                                                            
-                                                                JList<String> existingTagsList = new JList<>(tagListModel);
-                                                                existingTagsList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-                                                                existingTagsList.setVisibleRowCount(5);
-                                                                JScrollPane tagsScrollPane = new JScrollPane(existingTagsList);
-                                                            
-                                                                JTextField newTagField = new JTextField(15);
-                                                                JButton addTagButton = new JButton("Add Tag");
-                                                            
-                                                                JPanel tagsPanel = new JPanel();
-                                                                tagsPanel.setLayout(new BorderLayout());
-                                                                tagsPanel.add(tagsScrollPane, BorderLayout.CENTER);
-                                                            
-                                                                JPanel addTagPanel = new JPanel();
-                                                                addTagPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                                                                addTagPanel.add(new JLabel("New Tag:"));
-                                                                addTagPanel.add(newTagField);
-                                                                addTagPanel.add(addTagButton);
-                                                                tagsPanel.add(addTagPanel, BorderLayout.SOUTH);
-                                                            
-                                                                gbc.gridx = 0;
-                                                                gbc.gridy = 5;
-                                                                formPanel.add(tagsLabel, gbc);
-                                                                gbc.gridx = 1;
-                                                                formPanel.add(tagsPanel, gbc);
-                                                            
-                                                                // Add form panel to dialog
-                                                                addDialog.add(formPanel, BorderLayout.CENTER);
-                                                            
-                                                                // Create Save and Gen AI buttons
-                                                                JButton saveButton = new JButton("Save");
-                                                                JButton genAIButton = new JButton("Gen AI");
-                                                            
-                                                                // Action listener for Save button
-                                                                saveButton.addActionListener(e -> {
-                                                                    String newTitle = titleField.getText().trim();
-                                                                    String newDescription = descriptionArea.getText().trim();
-                                                                    String newDueDate = dueDateField.getText().trim();
-                                                                    String newPriority = ((Priority) priorityCombo.getSelectedItem()).name();
-                                                                    String newStatus = ((Status) statusCombo.getSelectedItem()).name();
-                                                                    List<String> selectedExistingTags = existingTagsList.getSelectedValuesList();
-                                                                    String newTag = newTagField.getText().trim();
-                                                            
-                                                                    if (!newTag.isEmpty() && !tagListModel.contains(newTag)) {
-                                                                        selectedExistingTags.add(newTag);
-                                                                    }
-                                                            
-                                                                    List<String> uniqueTags = selectedExistingTags.stream().distinct().collect(Collectors.toList());
-                                                            
-                                                                    if (newTitle.isEmpty()) {
-                                                                        JOptionPane.showMessageDialog(addDialog, "Title cannot be empty.", "Input Error", JOptionPane.ERROR_MESSAGE);
-                                                                        return;
-                                                                    }
-                                                            
-                                                                    saveTaskChanges(newTask, newTitle, newDescription, newDueDate, newPriority, newStatus, uniqueTags);
-                                                            
-                                                                    addDialog.dispose();
-                                                                });
-                                                            
-                                                                // Action listener for Gen AI button
-                                                                genAIButton.addActionListener(e -> {
-                                                                    System.out.println("Gen AI button clicked!");
-                                                                    // Add logic for Gen AI here
-                                                                });
-                                                            
-                                                                // Add buttons to button panel
-                                                                JPanel buttonPanel = new JPanel();
-                                                                buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
-                                                                buttonPanel.add(genAIButton);
-                                                                buttonPanel.add(saveButton);
-                                                            
-                                                                // Add button panel to dialog
-                                                                addDialog.add(buttonPanel, BorderLayout.SOUTH);
-                                                            
-                                                                // Show the dialog
-                                                                addDialog.setVisible(true);
-                                                            }
                                                             
                                                             
                                                             private static void createTaskTile(Task task, JPanel panel, String userRole) {
@@ -1290,6 +1435,17 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                         WriteBatch batch = db.batch();
                                                     
                                                         try {
+                                                            // Kiểm tra Task ID, nếu chưa có thì tạo mới
+                                                            if (task.getTaskID() == null || task.getTaskID().isEmpty()) {
+                                                                String autoGeneratedId = db.collection("Workspace")
+                                                                                           .document(task.getWorkspaceId())
+                                                                                           .collection("Task")
+                                                                                           .document()
+                                                                                           .getId();
+                                                                task.setTaskID(autoGeneratedId);
+                                                                System.out.println("Generated new Task ID: " + autoGeneratedId);
+                                                            }
+                                                    
                                                             // Update the task object with the new values
                                                             System.out.println("Updating task fields...");
                                                             task.setTitle(newTitle);
@@ -1300,10 +1456,17 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                                 task.setPriority(convertToPriorityEnum(newPriority));
                                                             } catch (IllegalArgumentException e) {
                                                                 System.err.println("Invalid priority value: " + newPriority);
-                                                                throw new IllegalArgumentException("Invalid priority value: " + newPriority);
+                                                                throw new IllegalArgumentException("Invalid priority value: " + newPriority + ". Valid values are: HIGH, MEDIUM, LOW.");
                                                             }
                                                     
-                                                            task.setStatus(Status.valueOf(newStatus)); // Convert the string to Status enum
+                                                            // Chuyển đổi Status
+                                                            try {
+                                                                task.setStatus(Status.valueOf(newStatus));
+                                                            } catch (IllegalArgumentException e) {
+                                                                System.err.println("Invalid status value: " + newStatus);
+                                                                throw new IllegalArgumentException("Invalid status value: " + newStatus + ".");
+                                                            }
+                                                    
                                                             System.out.println("Task fields updated.");
                                                     
                                                             // Parse the due date string and set it in the task
@@ -1374,25 +1537,24 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                         }
                                                     }
                                                     
-                                                    /**
-                                                     * Chuyển đổi chuỗi hiển thị thành giá trị enum Priority.
-                                                     *
-                                                     * @param displayValue Chuỗi hiển thị (e.g., "High Priority")
-                                                     * @return Giá trị enum Priority tương ứng
-                                                     * @throws IllegalArgumentException nếu giá trị không hợp lệ
-                                                     */
-                                                    private static Priority convertToPriorityEnum(String displayValue) {
-                                                        switch (displayValue) {
-                                                            case "High Priority":
+                                                    
+                                                    // Hàm chuyển đổi priority từ chuỗi sang enum Priority
+                                                    private static Priority convertToPriorityEnum(String priority) {
+                                                        switch (priority.toUpperCase()) {
+                                                            case "HIGH":
+                                                            case "HIGH PRIORITY":
                                                                 return Priority.HIGH;
-                                                            case "Medium Priority":
+                                                            case "MEDIUM":
+                                                            case "MEDIUM PRIORITY":
                                                                 return Priority.MEDIUM;
-                                                            case "Low Priority":
+                                                            case "LOW":
+                                                            case "LOW PRIORITY":
                                                                 return Priority.LOW;
                                                             default:
-                                                                throw new IllegalArgumentException("Invalid priority value: " + displayValue);
+                                                                throw new IllegalArgumentException("Invalid priority value: " + priority);
                                                         }
                                                     }
+                                                    
                                                     
                                     
                                     
