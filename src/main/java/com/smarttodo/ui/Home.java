@@ -374,8 +374,8 @@ private JPanel createWorkspacePanel(String workspaceId) {
             int askAIWidth = (int) (baseButtonSize * 3);
             askAIButton.setPreferredSize(new Dimension(askAIWidth, baseButtonSize));
 
-            // Khi nhấn nút ASK AI
             askAIButton.addActionListener(e -> {
+                // Logic gọi AI như cũ
                 AIPopupPanel aiPanel = new AIPopupPanel();
 
                 // Tạo dialog "Loading..." với hiệu ứng xoay
@@ -448,6 +448,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                     loadingDialog.setVisible(true); // Hiển thị dialog Loading trong khi worker đang chạy
                 });
             });
+            
 
             rightButtonPanel.add(askAIButton);
 
@@ -492,7 +493,22 @@ private JPanel createWorkspacePanel(String workspaceId) {
                     if (querySnapshot != null && !querySnapshot.isEmpty()) {
                         for (QueryDocumentSnapshot document : querySnapshot) {
                             Task task = document.toObject(Task.class);
-                            createTaskTile(task, tasksPanel, userRole);
+
+                            // Tạo task tile và thêm sự kiện mở cửa sổ chỉnh sửa
+                            JPanel taskTile = new JPanel();
+                            createTaskTile(task, taskTile, userRole);
+                            
+                            taskTile.addMouseListener(new MouseAdapter() {
+                                @Override
+                                public void mouseClicked(MouseEvent e) {
+                                    if (SwingUtilities.isLeftMouseButton(e)) {
+                                        openEditDialog(task, taskTile);
+                                    }
+                                }
+                            });
+
+                            tasksPanel.add(taskTile);
+                            tasksPanel.add(Box.createVerticalStrut(10));
                         }
                     } else {
                         JLabel noTasksLabel = new JLabel("No tasks available for this workspace.", JLabel.CENTER);
@@ -1175,68 +1191,79 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                             
                                                             
                                                             
-                                                            private static void createTaskTile(Task task, JPanel panel, String userRole) {
-                            JPanel taskTile = new JPanel();
-                            taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
-                            taskTile.setBackground(new Color(45, 45, 45));
-                            taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
-                            taskTile.setMaximumSize(new Dimension(600, 200));
-                        
-                            JLabel titleLabel = new JLabel(task.getTitle());
-                            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                            titleLabel.setForeground(Color.WHITE);
-                        
-                            JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
-                            descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                            descriptionLabel.setForeground(Color.LIGHT_GRAY);
-                        
-                            JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
-                            dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                            dueDateLabel.setForeground(Color.GRAY);
-                        
-                            JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
-                            priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                            priorityLabel.setForeground(getPriorityColor(task.getPriority()));
-                                                    
-                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                                                        tagsPanel.setBackground(new Color(45, 45, 45));
-                                                    
-                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
-                                                            for (String tag : task.getTagsname()) {
-                                                                JLabel tagLabel = new JLabel(tag);
-                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                tagLabel.setForeground(Color.WHITE);
-                                                                tagLabel.setOpaque(true);
-                                                                tagLabel.setBackground(new Color(0, 0, 128));
-                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                                                                tagsPanel.add(tagLabel);
-                                                            }
-                                                        }
-                                                    
-                                                        taskTile.add(titleLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(descriptionLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(dueDateLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(priorityLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(tagsPanel);
-                                                    
-                                                        panel.add(taskTile);
-                                                        panel.add(Box.createVerticalStrut(10));
-                                                    }
-                                                    
+                                                                    private static void createTaskTile(Task task, JPanel panel, String userRole) {
+                                                                        JPanel taskTile = new JPanel();
+                                                                        taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
+                                                                        taskTile.setBackground(new Color(45, 45, 45));
+                                                                        taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                                                                        taskTile.setMaximumSize(new Dimension(600, 200));
+                                                                    
+                                                                        JLabel titleLabel = new JLabel(task.getTitle());
+                                                                        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                                                                        titleLabel.setForeground(Color.WHITE);
+                                                                    
+                                                                        JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
+                                                                        descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                                                                        descriptionLabel.setForeground(Color.LIGHT_GRAY);
+                                                                    
+                                                                        JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
+                                                                        dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                        dueDateLabel.setForeground(Color.GRAY);
+                                                                    
+                                                                        JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
+                                                                        priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                        priorityLabel.setForeground(getPriorityColor(task.getPriority()));
+                                                                    
+                                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                                                                        tagsPanel.setBackground(new Color(45, 45, 45));
+                                                                    
+                                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
+                                                                            for (String tag : task.getTagsname()) {
+                                                                                JLabel tagLabel = new JLabel(tag);
+                                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                                tagLabel.setForeground(Color.WHITE);
+                                                                                tagLabel.setOpaque(true);
+                                                                                tagLabel.setBackground(new Color(0, 0, 128));
+                                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                                                                                tagsPanel.add(tagLabel);
+                                                                            }
+                                                                        }
+                                                                    
+                                                                        taskTile.add(titleLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(descriptionLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(dueDateLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(priorityLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(tagsPanel);
+                                                                    
+                                                                        // Thêm sự kiện mở cửa sổ chỉnh sửa task
+                                                                        taskTile.addMouseListener(new MouseAdapter() {
+                                                                            @Override
+                                                                            public void mouseClicked(MouseEvent e) {
+                                                                                if (SwingUtilities.isLeftMouseButton(e)) {
+                                                                                    openEditDialog(task, taskTile);
+                                                                                    }
+                                                                                }
+                                                                            });
+                                                                        
+                                                                            panel.add(taskTile);
+                                                                            panel.add(Box.createVerticalStrut(10));
+                                                                        }
+                                                                        
                                                         
+                                                            
+                                                            
                                                         
-                                                    
-                                                        /**
-                                                     * Opens a dialog to edit the task details, including tags.
-                                                     *
-                                                     * @param task     The task to edit.
-                                                     * @param taskTile The JPanel representing the task tile to update after editing.
-                                                     */
-                                                    private void openEditDialog(Task task, JPanel taskTile) {
+                                                            /**
+                                                         * Opens a dialog to edit the task details, including tags.
+                                                         *
+                                                         * @param task     The task to edit.
+                                                         * @param taskTile The JPanel representing the task tile to update after editing.
+                                                         */
+                                                        private static void openEditDialog(Task task, JPanel taskTile) {
                                                         // Create a modal dialog
                                                         JDialog editDialog = new JDialog((Frame) null, "Edit Task", true);
                                                         editDialog.setSize(500, 600);
