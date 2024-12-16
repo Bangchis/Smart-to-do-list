@@ -223,7 +223,7 @@ public class Home extends JFrame {
     
     private List<AIPopupPanel.SuggestedTask> executePythonScript(String tasksJson) {
         List<AIPopupPanel.SuggestedTask> tasks = new ArrayList<>();
-        String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
+        String pythonScriptPath = "src/main/resources/ai.py";
     
         try {
             // Tạo ProcessBuilder để chạy Python script
@@ -1048,7 +1048,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                                                 JPanel loadingPanel = new JPanel();
                                                                                 loadingPanel.setLayout(new BorderLayout());
                                                                                 JLabel loadingLabel = new JLabel("Generating task with AI, please wait...", SwingConstants.CENTER);
-                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
+                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
                                                                                 spinnerLabel.setHorizontalAlignment(SwingConstants.CENTER);
                                                                                 loadingPanel.add(loadingLabel, BorderLayout.NORTH);
                                                                                 loadingPanel.add(spinnerLabel, BorderLayout.CENTER);
@@ -1059,7 +1059,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                                                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                                                                                     @Override
                                                                                     protected Void doInBackground() throws Exception {
-                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/addtask_by_ai.py");
+                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "src/main/resources/addtask_by_ai.py");
                                                                                         processBuilder.redirectErrorStream(true);
                                                                                         Process process = processBuilder.start();
 

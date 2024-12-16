@@ -27,7 +27,7 @@ public class LoginForm extends JFrame {
 
         // Load background image
         try {
-            backgroundImage = ImageIO.read(new File("/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/oopbackground.jpeg"));
+            backgroundImage = ImageIO.read(new File("src/main/resources/oopbackground.jpeg"));
         } catch (Exception e) {
             e.printStackTrace();
         }
