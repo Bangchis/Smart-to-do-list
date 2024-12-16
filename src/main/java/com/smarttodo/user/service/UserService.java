@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.smarttodo.task.model.Task; // Nếu class Task nằm trong package này
+import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -15,10 +16,12 @@ import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.firebase.service.FirebaseFirestore;
 import com.smarttodo.reminder.model.Reminder;
 import com.smarttodo.user.model.User;
 import com.smarttodo.workspace.model.Workspace;
 import com.google.cloud.Timestamp;
+
 
 public class UserService {
     // Static variable to hold the current user instance
@@ -148,20 +151,41 @@ public class UserService {
     
 
 
-    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate) {
-        User currentUser = getCurrentUser();
+    public static Reminder createReminderInstance(String taskID, String recurrencePattern, Date dueDate, User currentUser, String titleString) {
         if (currentUser == null) {
             throw new IllegalStateException("No user is currently logged in.");
         }
         String reminderID = UUID.randomUUID().toString(); // Generate a unique ID for the reminder
-        return new Reminder(reminderID, taskID, recurrencePattern, dueDate, currentUser);
+        return new Reminder(reminderID, taskID, recurrencePattern, dueDate, titleString);
     
     }
+
 
     public static Workspace createWorkspaceInstance(String workspaceId, String name, String description) {
         
         return new Workspace( workspaceId, name, description, currentUser.getUserId());
     }
+    
+
+    public static User getUserData(String userId) throws Exception {
+        // Fetch user details from Firestore
+        Map<String, Object> userDetails = getUserDetails(userId);
+    
+        // Create User instance from fetched details
+        return createUserinstance(
+            userId,
+            (String) userDetails.get("username"),
+            (String) userDetails.get("email"),
+            (String) userDetails.get("password"), // Password handling needs to be secured
+            (String) userDetails.get("birthday"),
+            ((Long) userDetails.get("gender")).intValue(),
+            (String) userDetails.get("phoneNumber"),
+            userDetails.containsKey("assignedTasks") ? (List<Task>) userDetails.get("assignedTasks") : new ArrayList<>(),
+            userDetails.containsKey("workspacesId") ? (List<String>) userDetails.get("workspacesId") : new ArrayList<>(),
+            userDetails.containsKey("reminderIds") ? (List<String>) userDetails.get("reminderIds") : new ArrayList<>()
+        );
+    }
+    
    
     
 }
