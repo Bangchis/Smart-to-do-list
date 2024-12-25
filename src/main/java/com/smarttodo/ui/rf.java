@@ -242,8 +242,9 @@ if (userId != null) {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new LoginPage();  // Open LoginPage when clicking Login button
-                dispose();
+                LoginForm login = new LoginForm();  // Open LoginPage when clicking Login button
+                login.setVisible(true);
+                dispose(); // Close the registration form
             }
         });
 

@@ -88,9 +88,12 @@ public class LoginForm extends JFrame {
 
         // Create account label (No action for now, can be linked to the registration page later)
         gbc.gridy++;
-        JLabel createAccountLabel = new JLabel("Create your account");
-        createAccountLabel.setForeground(new Color(100, 100, 100));
-        loginPanel.add(createAccountLabel, gbc);
+        JButton registerButton = new JButton("REGISTER");
+        registerButton.setPreferredSize(new Dimension(150, 40));
+        registerButton.setBackground(new Color(34, 47, 62));
+        registerButton.setForeground(Color.BLACK);
+        registerButton.setFocusPainted(false);
+        loginPanel.add(registerButton, gbc);
 
         // Center login panel on main panel
         GridBagConstraints mainGbc = new GridBagConstraints();
@@ -101,6 +104,15 @@ public class LoginForm extends JFrame {
 
         // Add main panel to frame
         add(mainPanel);
+
+        registerButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                rf register = new rf();  // Open LoginPage when clicking Login button
+                register.setVisible(true);
+                dispose(); // Close the login form
+            }
+        });
 
         // Button action listener for login
         loginButton.addActionListener(new ActionListener() {

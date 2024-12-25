@@ -1,6 +1,7 @@
 package com.smarttodo.ui;
 
 import com.smarttodo.firebase.FirebaseConfig;
+import com.smarttodo.firebase.service.FirebaseFirestore;
 import com.smarttodo.reminder.model.Reminder;
 import com.smarttodo.reminder.service.ReminderService;
 import com.smarttodo.task.model.Priority;
@@ -10,7 +11,7 @@ import com.smarttodo.ui.Home.AIPopupPanel.SuggestedTask;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
 import com.smarttodo.workspace.model.Workspace;
-
+import com.smarttodo.workspace.model.WorkspaceRole;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
@@ -95,7 +96,7 @@ public class Home extends JFrame {
         contentPanel.add(homepagePanel, "Home");
 
         // Workspace panel (initially empty or placeholder)
-        JPanel workspacePanel = createWorkspacePanel("d68bbe29-5915-4e05-9aa8-76ee68094fd4");
+        JPanel workspacePanel = createWorkspacePanel("d68bbe29-5915-4e05-9aa8-76ee68094fd4", sidebar);
         contentPanel.add(workspacePanel, "Workspace");
 
         // Add the content panel to the main frame
@@ -223,7 +224,7 @@ public class Home extends JFrame {
     
     private List<AIPopupPanel.SuggestedTask> executePythonScript(String tasksJson) {
         List<AIPopupPanel.SuggestedTask> tasks = new ArrayList<>();
-        String pythonScriptPath = "src/main/resources/ai.py";
+        String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
     
         try {
             // Tạo ProcessBuilder để chạy Python script
@@ -320,7 +321,7 @@ public class Home extends JFrame {
     // Bổ sung Map để lưu trữ tasksPanel
 private final Map<String, JPanel> workspaceTasksPanels = new HashMap<>();
 
-private JPanel createWorkspacePanel(String workspaceId) {
+private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
     JPanel panel = new JPanel();
 
     panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS)); // Use BoxLayout for vertical stacking
@@ -351,20 +352,52 @@ private JPanel createWorkspacePanel(String workspaceId) {
             JPanel rightButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
             rightButtonPanel.setOpaque(false);
 
-            int baseButtonSize = 50; // Kích thước nút '+'
-            if (!"VIEWER".equals(userRole)) {
-                JButton addTaskButton = new JButton("+");
-                addTaskButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-                addTaskButton.setForeground(Color.BLACK);
-                addTaskButton.setBackground(new Color(60, 60, 60));
-                addTaskButton.setFocusPainted(false);
-                addTaskButton.setPreferredSize(new Dimension(baseButtonSize, baseButtonSize));
-                addTaskButton.addActionListener(e -> openAddTaskDialog(workspaceId));
+            JPanel leftButtonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
+            leftButtonPanel.setOpaque(false);
 
-                rightButtonPanel.add(addTaskButton);
+            if ("OWNER".equals(userRole)) {
+                JButton deleteWorkspaceButton = new JButton("Delete Workspace");
+                deleteWorkspaceButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+                deleteWorkspaceButton.setForeground(Color.BLACK);
+                deleteWorkspaceButton.setBackground(new Color(60, 60, 60));
+                deleteWorkspaceButton.setFocusPainted(false);
+                deleteWorkspaceButton.addActionListener(e -> {
+                    DeleteWorkspace(workspaceId);
+                    sidebar.fetchWorkspaces();
+                });
+                
+
+                rightButtonPanel.add(deleteWorkspaceButton);
             }
 
-            // Nút ASK AI
+            int baseButtonSize = 50; // Kích thước nút '+'
+            if (!"VIEWER".equals(userRole)) {
+
+                JButton addCollaboratorButton = new JButton("Add Collaborator");
+                addCollaboratorButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+                addCollaboratorButton.setForeground(Color.BLACK);
+                addCollaboratorButton.setBackground(new Color(60, 60, 60));
+                addCollaboratorButton.setFocusPainted(false);
+            
+                addCollaboratorButton.addActionListener(e -> {
+                    // Show dialog to add a collaborator
+                    showAddCollaboratorDialog(workspaceId);
+                });
+            
+                rightButtonPanel.add(addCollaboratorButton);
+
+            // Nút thêm task
+            JButton addTaskButton = new JButton("+");
+            addTaskButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+            addTaskButton.setForeground(Color.BLACK);
+            addTaskButton.setBackground(new Color(60, 60, 60));
+            addTaskButton.setFocusPainted(false);
+            addTaskButton.setPreferredSize(new Dimension(baseButtonSize, baseButtonSize));
+            addTaskButton.addActionListener(e -> openAddTaskDialog(workspaceId));
+
+            rightButtonPanel.add(addTaskButton);
+
+                // Nút ASK AI
             JButton askAIButton = new JButton("ASK AI");
             askAIButton.setFont(new Font("Segoe UI", Font.PLAIN, 18));
             askAIButton.setForeground(Color.BLACK);
@@ -374,8 +407,8 @@ private JPanel createWorkspacePanel(String workspaceId) {
             int askAIWidth = (int) (baseButtonSize * 3);
             askAIButton.setPreferredSize(new Dimension(askAIWidth, baseButtonSize));
 
+            // Khi nhấn nút ASK AI
             askAIButton.addActionListener(e -> {
-                // Logic gọi AI như cũ
                 AIPopupPanel aiPanel = new AIPopupPanel();
 
                 // Tạo dialog "Loading..." với hiệu ứng xoay
@@ -448,9 +481,12 @@ private JPanel createWorkspacePanel(String workspaceId) {
                     loadingDialog.setVisible(true); // Hiển thị dialog Loading trong khi worker đang chạy
                 });
             });
+            rightButtonPanel.add(askAIButton);
+            }
+
             
 
-            rightButtonPanel.add(askAIButton);
+            
 
             appBar.add(rightButtonPanel, BorderLayout.EAST);
             panel.add(appBar);
@@ -493,22 +529,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                     if (querySnapshot != null && !querySnapshot.isEmpty()) {
                         for (QueryDocumentSnapshot document : querySnapshot) {
                             Task task = document.toObject(Task.class);
-
-                            // Tạo task tile và thêm sự kiện mở cửa sổ chỉnh sửa
-                            JPanel taskTile = new JPanel();
-                            createTaskTile(task, taskTile, userRole);
-                            
-                            taskTile.addMouseListener(new MouseAdapter() {
-                                @Override
-                                public void mouseClicked(MouseEvent e) {
-                                    if (SwingUtilities.isLeftMouseButton(e)) {
-                                        openEditDialog(task, taskTile);
-                                    }
-                                }
-                            });
-
-                            tasksPanel.add(taskTile);
-                            tasksPanel.add(Box.createVerticalStrut(10));
+                            createTaskTile(task, tasksPanel, userRole);
                         }
                     } else {
                         JLabel noTasksLabel = new JLabel("No tasks available for this workspace.", JLabel.CENTER);
@@ -1064,7 +1085,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                                                 JPanel loadingPanel = new JPanel();
                                                                                 loadingPanel.setLayout(new BorderLayout());
                                                                                 JLabel loadingLabel = new JLabel("Generating task with AI, please wait...", SwingConstants.CENTER);
-                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
+                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
                                                                                 spinnerLabel.setHorizontalAlignment(SwingConstants.CENTER);
                                                                                 loadingPanel.add(loadingLabel, BorderLayout.NORTH);
                                                                                 loadingPanel.add(spinnerLabel, BorderLayout.CENTER);
@@ -1075,7 +1096,7 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                                                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                                                                                     @Override
                                                                                     protected Void doInBackground() throws Exception {
-                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "src/main/resources/addtask_by_ai.py");
+                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/addtask_by_ai.py");
                                                                                         processBuilder.redirectErrorStream(true);
                                                                                         Process process = processBuilder.start();
 
@@ -1191,79 +1212,68 @@ private JPanel createWorkspacePanel(String workspaceId) {
                                                             
                                                             
                                                             
-                                                                    private static void createTaskTile(Task task, JPanel panel, String userRole) {
-                                                                        JPanel taskTile = new JPanel();
-                                                                        taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
-                                                                        taskTile.setBackground(new Color(45, 45, 45));
-                                                                        taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
-                                                                        taskTile.setMaximumSize(new Dimension(600, 200));
-                                                                    
-                                                                        JLabel titleLabel = new JLabel(task.getTitle());
-                                                                        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                                                                        titleLabel.setForeground(Color.WHITE);
-                                                                    
-                                                                        JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
-                                                                        descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                                                                        descriptionLabel.setForeground(Color.LIGHT_GRAY);
-                                                                    
-                                                                        JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
-                                                                        dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                        dueDateLabel.setForeground(Color.GRAY);
-                                                                    
-                                                                        JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
-                                                                        priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                        priorityLabel.setForeground(getPriorityColor(task.getPriority()));
-                                                                    
-                                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                                                                        tagsPanel.setBackground(new Color(45, 45, 45));
-                                                                    
-                                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
-                                                                            for (String tag : task.getTagsname()) {
-                                                                                JLabel tagLabel = new JLabel(tag);
-                                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                                tagLabel.setForeground(Color.WHITE);
-                                                                                tagLabel.setOpaque(true);
-                                                                                tagLabel.setBackground(new Color(0, 0, 128));
-                                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                                                                                tagsPanel.add(tagLabel);
-                                                                            }
-                                                                        }
-                                                                    
-                                                                        taskTile.add(titleLabel);
-                                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                                        taskTile.add(descriptionLabel);
-                                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                                        taskTile.add(dueDateLabel);
-                                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                                        taskTile.add(priorityLabel);
-                                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                                        taskTile.add(tagsPanel);
-                                                                    
-                                                                        // Thêm sự kiện mở cửa sổ chỉnh sửa task
-                                                                        taskTile.addMouseListener(new MouseAdapter() {
-                                                                            @Override
-                                                                            public void mouseClicked(MouseEvent e) {
-                                                                                if (SwingUtilities.isLeftMouseButton(e)) {
-                                                                                    openEditDialog(task, taskTile);
-                                                                                    }
-                                                                                }
-                                                                            });
-                                                                        
-                                                                            panel.add(taskTile);
-                                                                            panel.add(Box.createVerticalStrut(10));
-                                                                        }
-                                                                        
+                                                            private static void createTaskTile(Task task, JPanel panel, String userRole) {
+                            JPanel taskTile = new JPanel();
+                            taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
+                            taskTile.setBackground(new Color(45, 45, 45));
+                            taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                            taskTile.setMaximumSize(new Dimension(600, 200));
+                        
+                            JLabel titleLabel = new JLabel(task.getTitle());
+                            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                            titleLabel.setForeground(Color.WHITE);
+                        
+                            JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
+                            descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                            descriptionLabel.setForeground(Color.LIGHT_GRAY);
+                        
+                            JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
+                            dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                            dueDateLabel.setForeground(Color.GRAY);
+                        
+                            JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
+                            priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                            priorityLabel.setForeground(getPriorityColor(task.getPriority()));
+                                                    
+                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                                                        tagsPanel.setBackground(new Color(45, 45, 45));
+                                                    
+                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
+                                                            for (String tag : task.getTagsname()) {
+                                                                JLabel tagLabel = new JLabel(tag);
+                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                tagLabel.setForeground(Color.WHITE);
+                                                                tagLabel.setOpaque(true);
+                                                                tagLabel.setBackground(new Color(0, 0, 128));
+                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                                                                tagsPanel.add(tagLabel);
+                                                            }
+                                                        }
+                                                    
+                                                        taskTile.add(titleLabel);
+                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                        taskTile.add(descriptionLabel);
+                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                        taskTile.add(dueDateLabel);
+                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                        taskTile.add(priorityLabel);
+                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                        taskTile.add(tagsPanel);
+                                                    
+                                                        panel.add(taskTile);
+                                                        panel.add(Box.createVerticalStrut(10));
+                                                    }
+                                                    
                                                         
-                                                            
-                                                            
                                                         
-                                                            /**
-                                                         * Opens a dialog to edit the task details, including tags.
-                                                         *
-                                                         * @param task     The task to edit.
-                                                         * @param taskTile The JPanel representing the task tile to update after editing.
-                                                         */
-                                                        private static void openEditDialog(Task task, JPanel taskTile) {
+                                                    
+                                                        /**
+                                                     * Opens a dialog to edit the task details, including tags.
+                                                     *
+                                                     * @param task     The task to edit.
+                                                     * @param taskTile The JPanel representing the task tile to update after editing.
+                                                     */
+                                                    private void openEditDialog(Task task, JPanel taskTile) {
                                                         // Create a modal dialog
                                                         JDialog editDialog = new JDialog((Frame) null, "Edit Task", true);
                                                         editDialog.setSize(500, 600);
@@ -1665,13 +1675,19 @@ public void switchContentView(String viewName, String workspaceId) {
     
     // Show the desired view (either Home or Workspace)
     cardLayout.show(contentPanel, viewName);
-
+    Sidebar sidebar = new Sidebar(currentUser, new Sidebar.OnWorkspaceSwitchListener() {
+        @Override
+        public void onWorkspaceSwitch(String viewName, String workspaceId) {
+            // Call the switchContentView method in the Home class
+            switchContentView(viewName, workspaceId); // 'Home.this' refers to the outer Home instance
+        }
+    });
     // If switching to Workspace view, update the workspace panel with the correct ID
     if (viewName.equals("Workspace")) {
         System.out.println("Switching to Workspace view. Workspace ID: " + workspaceId);
 
         // Fetch the workspace details and create a workspace panel with the provided ID
-        JPanel workspacePanel = createWorkspacePanel(workspaceId);
+        JPanel workspacePanel = createWorkspacePanel(workspaceId, sidebar);
 
         // Add the workspace panel to the content panel
         contentPanel.add(workspacePanel, "Workspace");
@@ -1690,6 +1706,104 @@ public void switchContentView(String viewName, String workspaceId) {
         cardLayout.show(contentPanel, "Home");
 
         System.out.println("Home view displayed.");
+    }
+}
+
+public void DeleteWorkspace(String workspaceId) {
+    // Initialize Firebase Firestore instance
+    Firestore db = FirestoreClient.getFirestore();
+    // Delete the workspace from the Workspace collection
+    try {
+        // Delete the workspace from the Workspace collection
+        ApiFuture<WriteResult> deleteFuture = db.collection("Workspace").document(workspaceId).delete();
+        deleteFuture.get(); // Wait for the delete operation to complete
+        System.out.println("Workspace deleted successfully!");
+
+        // Update the user's WorkspacesId field
+        String currentUserId = currentUser.getUserId(); // Replace with your method to get the current user's ID
+        DocumentReference userDocRef = db.collection("User").document(currentUserId);
+
+        ApiFuture<WriteResult> updateFuture = userDocRef.update("workspacesId", FieldValue.arrayRemove(workspaceId));
+        updateFuture.get(); // Wait for the update operation to complete
+        System.out.println("Workspace ID removed from user's document successfully!");
+
+    } catch (ExecutionException | InterruptedException e) {
+        System.err.println("Error occurred during Firestore operation: " + e.getMessage());
+        Thread.currentThread().interrupt(); // Restore interrupted state
+    }
+}
+
+private void showAddCollaboratorDialog(String workspaceId) {
+    // Create a panel for the dialog
+    JPanel panel = new JPanel(new GridLayout(3, 2, 10, 10));
+    panel.setPreferredSize(new Dimension(400, 150));
+
+    // Input fields
+    JTextField emailField = new JTextField();
+    JComboBox<WorkspaceRole> roleComboBox = new JComboBox<>(WorkspaceRole.values());
+
+    // Add components to the panel
+    panel.add(new JLabel("Gmail:"));
+    panel.add(emailField);
+    panel.add(new JLabel("Role:"));
+    panel.add(roleComboBox);
+
+    int result = JOptionPane.showConfirmDialog(null, panel, "Add Collaborator",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+    if (result == JOptionPane.OK_OPTION) {
+        String email = emailField.getText().trim();
+        WorkspaceRole selectedRole = (WorkspaceRole) roleComboBox.getSelectedItem();
+
+        if (isValidEmail(email)) {
+            addCollaboratorToWorkspace(workspaceId, email, selectedRole);
+        } else {
+            JOptionPane.showMessageDialog(null, "Invalid Gmail address.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+}
+
+private boolean isValidEmail(String email) {
+    // Basic email validation (replace with a regex or more robust validation if needed)
+    return email.contains("@") && email.endsWith(".com");
+}
+
+private void addCollaboratorToWorkspace(String workspaceId, String email, WorkspaceRole role) {
+    Firestore db = FirestoreClient.getFirestore();
+
+    // Step 1: Retrieve the user ID from the Users collection based on the email
+    ApiFuture<QuerySnapshot> queryFuture = db.collection("User").whereEqualTo("email", email).get();
+
+    try {
+        QuerySnapshot querySnapshot = queryFuture.get();
+
+        if (querySnapshot.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "No user found with the provided email.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Assuming each email is unique and maps to one user
+        String userId = querySnapshot.getDocuments().get(0).getId();
+
+        // Step 2: Update the userRoles map in the Workspace document
+        DocumentReference workspaceDoc = db.collection("Workspace").document(workspaceId);
+        ApiFuture<WriteResult> updateUserRolesFuture = workspaceDoc.update("userRoles." + userId, role.name());
+
+        updateUserRolesFuture.get(); // Wait for completion
+
+        // Step 3: Add the workspaceId to the collaborator's document under workspacesId
+        DocumentReference userDoc = db.collection("User").document(userId);
+        ApiFuture<WriteResult> updateWorkspaceIdsFuture = userDoc.update("workspacesId", FieldValue.arrayUnion(workspaceId));
+
+        updateWorkspaceIdsFuture.get(); // Wait for completion
+
+        // Notify the user of success
+        JOptionPane.showMessageDialog(null, "Collaborator added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+
+    } catch (InterruptedException | ExecutionException e) {
+        System.err.println("Error adding collaborator: " + e.getMessage());
+        JOptionPane.showMessageDialog(null, "Error adding collaborator: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        Thread.currentThread().interrupt(); // Restore interrupted state
     }
 }
 

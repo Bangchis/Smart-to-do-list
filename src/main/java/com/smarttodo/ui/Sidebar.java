@@ -8,6 +8,7 @@ import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.firebase.cloud.FirestoreClient;
+import com.smarttodo.firebase.service.FirebaseAuthentication;
 import com.smarttodo.task.model.Priority;
 import com.smarttodo.task.model.Status;
 import com.smarttodo.task.model.Task;
@@ -103,6 +104,25 @@ public class Sidebar extends JPanel {
         
         // Fetch workspaces for the user
         fetchWorkspaces();
+
+        // Add logout button at the bottom
+        JButton logoutButton = new JButton("Log Out");
+        logoutButton.setAlignmentX(Component.CENTER_ALIGNMENT); // Center the button
+        logoutButton.setBackground(new Color(255, 69, 0)); // Optional: Red color for logout button
+        logoutButton.setForeground(Color.BLACK);
+        logoutButton.setFocusPainted(false);
+
+        // Add ActionListener to the logout button
+        logoutButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logout();
+            }
+        });
+
+        // Use a glue component to push the button to the bottom
+        add(Box.createVerticalGlue());
+        add(logoutButton);
     }
 
     private void createWorkspace() {
@@ -160,7 +180,7 @@ public class Sidebar extends JPanel {
 
 
     // Fetch all workspaces for the current user from Firestore
-    private void fetchWorkspaces() {
+    public void fetchWorkspaces() {
         // Firestore instance
         Firestore db = FirestoreClient.getFirestore();
 
@@ -221,4 +241,9 @@ public class Sidebar extends JPanel {
         revalidate();
         repaint();
     }
+
+    private void logout() {
+        
+}
+
 }

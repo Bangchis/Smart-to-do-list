@@ -25,6 +25,8 @@ import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.WriteResult;
 import com.smarttodo.user.service.UserService;
+import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.firebase.FirebaseConfig;
 
 
 public class FirebaseAuthentication {
@@ -119,7 +121,19 @@ public class FirebaseAuthentication {
     }
 
     
-
+    public static void logout(String userToken) {
+        try {
+            // Revoke the user's token using Firebase Admin SDK
+            FirebaseAuth.getInstance().revokeRefreshTokens(userToken);
+            System.out.println("User tokens revoked successfully.");
+    
+            // Optional: Clear client-side token or session (if applicable)
+            System.out.println("User session cleared.");
+        } catch (FirebaseAuthException e) {
+            System.out.println("Error revoking user tokens: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
     
 
     // Phương thức xác thực thông tin đăng nhập người dùng với email và password
