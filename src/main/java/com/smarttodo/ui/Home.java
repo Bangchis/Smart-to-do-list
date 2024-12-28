@@ -224,7 +224,7 @@ public class Home extends JFrame {
     
     private List<AIPopupPanel.SuggestedTask> executePythonScript(String tasksJson) {
         List<AIPopupPanel.SuggestedTask> tasks = new ArrayList<>();
-        String pythonScriptPath = "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/ai.py";
+        String pythonScriptPath = "src/main/resources/ai.py";
     
         try {
             // Tạo ProcessBuilder để chạy Python script
@@ -493,12 +493,74 @@ private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
 
             panel.add(Box.createVerticalStrut(20));
 
-            JLabel workspaceLabel = new JLabel("<html><b>" + workspaceName + "</b><br>" + workspaceDescription + "</html>", JLabel.LEFT);
-            workspaceLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
-            workspaceLabel.setForeground(Color.WHITE);
+            // Display the workspace name (editable on click)
+JTextField workspaceNameField = new JTextField(workspaceName);
+workspaceNameField.setFont(new Font("Segoe UI", Font.BOLD, 24));
+workspaceNameField.setForeground(Color.WHITE);
+workspaceNameField.setBackground(Color.BLACK);
+workspaceNameField.setBorder(BorderFactory.createEmptyBorder());
+workspaceNameField.setEditable(false);
 
-            panel.add(workspaceLabel);
-            panel.add(Box.createVerticalStrut(20));
+// Set fixed size for the name field
+workspaceNameField.setPreferredSize(new Dimension(400, 40));
+workspaceNameField.setMaximumSize(new Dimension(400, 40));
+
+// Add a MouseListener to enable editing on click
+workspaceNameField.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override
+    public void mouseClicked(java.awt.event.MouseEvent e) {
+        workspaceNameField.setEditable(true);
+        workspaceNameField.setForeground(Color.WHITE);
+        workspaceNameField.setBackground(Color.LIGHT_GRAY);
+    }
+});
+
+// Save the updated name on Enter key press or focus lost
+workspaceNameField.addActionListener(e -> saveUpdatedWorkspaceName(workspaceNameField.getText(), workspaceId));
+workspaceNameField.addFocusListener(new java.awt.event.FocusAdapter() {
+    @Override
+    public void focusLost(java.awt.event.FocusEvent e) {
+        saveUpdatedWorkspaceName(workspaceNameField.getText(), workspaceId);
+    }
+});
+
+// Display the workspace description (editable on click)
+JTextArea workspaceDescriptionArea = new JTextArea(workspaceDescription);
+workspaceDescriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+workspaceDescriptionArea.setForeground(Color.WHITE);
+workspaceDescriptionArea.setBackground(Color.BLACK);
+workspaceDescriptionArea.setBorder(BorderFactory.createEmptyBorder());
+workspaceDescriptionArea.setLineWrap(true);
+workspaceDescriptionArea.setWrapStyleWord(true);
+workspaceDescriptionArea.setEditable(false);
+
+// Set fixed size for the description area
+workspaceDescriptionArea.setPreferredSize(new Dimension(400, 100));
+workspaceDescriptionArea.setMaximumSize(new Dimension(400, 100));
+
+// Add a MouseListener to enable editing on click
+workspaceDescriptionArea.addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override
+    public void mouseClicked(java.awt.event.MouseEvent e) {
+        workspaceDescriptionArea.setEditable(true);
+        workspaceDescriptionArea.setForeground(Color.WHITE);
+        workspaceDescriptionArea.setBackground(Color.LIGHT_GRAY);
+    }
+});
+
+// Save the updated description on focus lost
+workspaceDescriptionArea.addFocusListener(new java.awt.event.FocusAdapter() {
+    @Override
+    public void focusLost(java.awt.event.FocusEvent e) {
+        saveUpdatedWorkspaceDescription(workspaceDescriptionArea.getText(), workspaceId);
+    }
+});
+
+// Add components to the panel
+panel.add(workspaceNameField);
+panel.add(Box.createVerticalStrut(10));
+panel.add(workspaceDescriptionArea);
+panel.add(Box.createVerticalStrut(20));
 
             // Bọc tasksPanel vào JScrollPane
             JPanel tasksPanel = new JPanel();
@@ -1021,57 +1083,49 @@ private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
                                                                         saveButton.addActionListener(e -> {
                                                                             String newTitle = titleField.getText().trim();
                                                                             String newDescription = descriptionArea.getText().trim();
-                                                                            String newDueDate = dueDateField.getText().trim();
-
-                                                                            // Chuyển đổi Priority về dạng chuẩn
-                                                                            String selectedPriority = ((Priority) priorityCombo.getSelectedItem()).toString(); // Lấy dạng "High Priority"
-                                                                            String newPriority;
-                                                                            switch (selectedPriority) {
-                                                                                case "High Priority":
-                                                                                    newPriority = "HIGH";
-                                                                                    break;
-                                                                                case "Medium Priority":
-                                                                                    newPriority = "MEDIUM";
-                                                                                    break;
-                                                                                case "Low Priority":
-                                                                                    newPriority = "LOW";
-                                                                                    break;
-                                                                                default:
-                                                                                    JOptionPane.showMessageDialog(addDialog, "Invalid priority value selected.", "Input Error", JOptionPane.ERROR_MESSAGE);
-                                                                                    return;
-                                                                            }
-
-                                                                            // Lấy Status
+                                                                            String newDueDateStr = dueDateField.getText().trim();
+                                                                            String newPriority = ((Priority) priorityCombo.getSelectedItem()).toString();
                                                                             String newStatus = ((Status) statusCombo.getSelectedItem()).name();
-
-                                                                            // Xử lý Tags
+                                                                        
+                                                                            // Process tags
                                                                             List<String> selectedTags = existingTagsList.getSelectedValuesList();
                                                                             String newTag = newTagField.getText().trim();
                                                                             if (!newTag.isEmpty() && !selectedTags.contains(newTag)) {
                                                                                 selectedTags.add(newTag);
                                                                             }
-
-                                                                            // Kiểm tra trường Title
+                                                                        
                                                                             if (newTitle.isEmpty()) {
                                                                                 JOptionPane.showMessageDialog(addDialog, "Title cannot be empty.", "Input Error", JOptionPane.ERROR_MESSAGE);
                                                                                 return;
                                                                             }
-
+                                                                        
                                                                             try {
-                                                                                // Lưu task vào Firestore
-                                                                                saveTaskChanges(newTask, newTitle, newDescription, newDueDate, newPriority, newStatus, selectedTags);
+                                                                                // Save task to Firestore
+                                                                                saveTaskChanges(newTask, newTitle, newDescription, newDueDateStr, newPriority, newStatus, selectedTags);
+                                                                        
+                                                                                // If a due date is provided, create a reminder
+                                                                                if (!newDueDateStr.isEmpty()) {
+                                                                                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(newDueDateStr);
+                                                                                    String recurrencePattern = "NONE"; // Adjust as needed
+                                                                                    Reminder reminder = UserService.createReminderInstance(newTask.getTaskID(), recurrencePattern, dueDate, currentUser, newTitle);
+                                                                        
+                                                                                    // Add the reminder to Firestore
+                                                                                    currentUser.addReminder(reminder);
+                                                                                }
+                                                                        
                                                                                 addDialog.dispose();
-                                                                                JOptionPane.showMessageDialog(null, "Task saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                                                                                JOptionPane.showMessageDialog(null, "Task and reminder saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                                                                             } catch (Exception ex) {
                                                                                 ex.printStackTrace();
-                                                                                JOptionPane.showMessageDialog(addDialog, "Error saving task: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                                                                                JOptionPane.showMessageDialog(addDialog, "Error saving task or reminder: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                                                                             }
                                                                         });
+                                                                        
 
                                                                     
                                                                         
-                                                                    // Action listener for Gen AI button
-                                                                    // Action listener for Gen AI button
+                                                                     
+                                                                            // Action listener for Gen AI button
                                                                             genAIButton.addActionListener(e -> {
                                                                                 String inputTitle = titleField.getText().trim();
 
@@ -1085,7 +1139,7 @@ private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
                                                                                 JPanel loadingPanel = new JPanel();
                                                                                 loadingPanel.setLayout(new BorderLayout());
                                                                                 JLabel loadingLabel = new JLabel("Generating task with AI, please wait...", SwingConstants.CENTER);
-                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
+                                                                                JLabel spinnerLabel = new JLabel(new ImageIcon("src/main/resources/Animation - 1734265581861.gif")); // Đường dẫn đến spinner GIF
                                                                                 spinnerLabel.setHorizontalAlignment(SwingConstants.CENTER);
                                                                                 loadingPanel.add(loadingLabel, BorderLayout.NORTH);
                                                                                 loadingPanel.add(spinnerLabel, BorderLayout.CENTER);
@@ -1096,7 +1150,7 @@ private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
                                                                                 SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
                                                                                     @Override
                                                                                     protected Void doInBackground() throws Exception {
-                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "/mnt/c/Users/Admin/git/repository2/smart-todo-list/src/main/resources/addtask_by_ai.py");
+                                                                                        ProcessBuilder processBuilder = new ProcessBuilder("python3", "src/main/resources/addtask_by_ai.py");
                                                                                         processBuilder.redirectErrorStream(true);
                                                                                         Process process = processBuilder.start();
 
@@ -1165,6 +1219,9 @@ private JPanel createWorkspacePanel(String workspaceId, Sidebar sidebar) {
 
                                                                                         // Lưu Task vào Firestore
                                                                                         saveTaskChanges(newTask, inputTitle, newDescription, new SimpleDateFormat("yyyy-MM-dd").format(newDueDate), newPriority, "New", tags);
+                                                                                        // Create reminder
+                                                                                        Reminder reminder = UserService.createReminderInstance(newTask.getTaskID(), "NONE", newDueDate, currentUser, inputTitle);
+                                                                                        currentUser.addReminder(reminder);
                                                                                         return null;
                                                                                     }
 
@@ -1807,6 +1864,51 @@ private void addCollaboratorToWorkspace(String workspaceId, String email, Worksp
     }
 }
 
+private void saveUpdatedWorkspaceName(String updatedName, String workspaceId) {
+    Firestore db = FirestoreClient.getFirestore();
+
+    if (workspaceId == null || workspaceId.isEmpty()) {
+        System.err.println("Workspace ID is null or empty. Cannot update workspace name.");
+        return;
+    }
+
+    // Reference to the current workspace document
+    DocumentReference workspaceDoc = db.collection("Workspace").document(workspaceId);
+
+    // Update the name field
+    ApiFuture<WriteResult> updateFuture = workspaceDoc.update("name", updatedName);
+
+    try {
+        WriteResult result = updateFuture.get();
+        System.out.println("Workspace name updated successfully at: " + result.getUpdateTime());
+    } catch (InterruptedException | ExecutionException e) {
+        System.err.println("Error updating workspace name: " + e.getMessage());
+        Thread.currentThread().interrupt(); // Restore interrupted status
+    }
+}
+
+private void saveUpdatedWorkspaceDescription(String updatedDescription, String workspaceId) {
+    Firestore db = FirestoreClient.getFirestore();
+
+    if (workspaceId == null || workspaceId.isEmpty()) {
+        System.err.println("Workspace ID is null or empty. Cannot update workspace description.");
+        return;
+    }
+
+    // Reference to the current workspace document
+    DocumentReference workspaceDoc = db.collection("Workspace").document(workspaceId);
+
+    // Update the description field
+    ApiFuture<WriteResult> updateFuture = workspaceDoc.update("description", updatedDescription);
+
+    try {
+        WriteResult result = updateFuture.get();
+        System.out.println("Workspace description updated successfully at: " + result.getUpdateTime());
+    } catch (InterruptedException | ExecutionException e) {
+        System.err.println("Error updating workspace description: " + e.getMessage());
+        Thread.currentThread().interrupt(); // Restore interrupted status
+    }
+}
 
 
     public static void main(String[] args) {

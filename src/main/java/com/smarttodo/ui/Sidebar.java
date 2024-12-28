@@ -212,21 +212,44 @@ public class Sidebar extends JPanel {
 
     // Create a button for a workspace
     private void createWorkspaceButton(String workspaceId) {
-        JButton workspaceButton = new JButton("Workspace " + workspaceId);
-        
-        // Add ActionListener to switch to that workspace view
-        workspaceButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (switchViewListener != null) {
-                    switchViewListener.onWorkspaceSwitch("Workspace", workspaceId); // Switch to the specific workspace
-                }
+        Firestore db = FirestoreClient.getFirestore();
+    
+        // Fetch the workspace name from Firestore
+        DocumentReference workspaceDoc = db.collection("Workspace").document(workspaceId);
+    
+        ApiFuture<DocumentSnapshot> future = workspaceDoc.get(); // Fetch the document asynchronously
+        try {
+            DocumentSnapshot document = future.get(); // Block until the operation completes
+    
+            if (document.exists()) {
+                // Retrieve the name field from the document
+                String workspaceName = document.getString("name");
+    
+                // Create the button with the workspace name
+                JButton workspaceButton = new JButton(workspaceName != null ? workspaceName : "Workspace " + workspaceId);
+    
+                // Add ActionListener to switch to that workspace view
+                workspaceButton.addActionListener(e -> {
+                    if (switchViewListener != null) {
+                        switchViewListener.onWorkspaceSwitch("Workspace", workspaceId); // Switch to the specific workspace
+                    }
+                });
+    
+                // Add button to the sidebar or container
+                add(workspaceButton);
+    
+                // Revalidate or repaint to update the UI
+                revalidate();
+                repaint();
+            } else {
+                System.err.println("No document found for workspaceId: " + workspaceId);
             }
-        });
-
-        // Add button to sidebar
-        add(workspaceButton);
+        } catch (Exception e) {
+            System.err.println("Error fetching workspace: " + e.getMessage());
+        }
     }
+    
+    
 
     // Remove all existing workspace buttons
     private void removeAllWorkspaceButtons() {
