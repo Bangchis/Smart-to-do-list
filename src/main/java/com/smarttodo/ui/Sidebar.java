@@ -272,7 +272,34 @@ public class Sidebar extends JPanel implements OnWorkspaceDeleteListener{
     }
 
     private void logout() {
-        
-}
+        int confirm = JOptionPane.showConfirmDialog(
+            this,
+            "Are you sure you want to log out?",
+            "Logout Confirmation",
+            JOptionPane.YES_NO_OPTION
+        );
+    
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+    
+                // Redirect to LoginForm
+                SwingUtilities.invokeLater(() -> {
+                    LoginForm loginForm = new LoginForm();
+                    loginForm.setVisible(true); // Display the login form
+                });
+    
+                // Close the current application window
+                JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                if (parentFrame != null) {
+                    parentFrame.dispose(); // Close the parent frame
+                }
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error during logout: " + e.getMessage(), "Logout Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    
 
 }
