@@ -12,10 +12,12 @@ import com.smarttodo.firebase.service.FirebaseAuthentication;
 import com.smarttodo.task.model.Priority;
 import com.smarttodo.task.model.Status;
 import com.smarttodo.task.model.Task;
+import com.smarttodo.ui.Home.OnWorkspaceDeleteListener;
 import com.smarttodo.ui.Sidebar.OnWorkspaceSwitchListener;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
 import com.smarttodo.workspace.model.Workspace;
+
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -28,7 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-public class Sidebar extends JPanel {
+public class Sidebar extends JPanel implements OnWorkspaceDeleteListener{
 
     private User currentUser;
     private OnWorkspaceSwitchListener switchViewListener;
@@ -36,6 +38,7 @@ public class Sidebar extends JPanel {
     public interface OnWorkspaceSwitchListener {
         void onWorkspaceSwitch(String viewName, String workspaceId);
     }
+    
 
     public Sidebar(User user, OnWorkspaceSwitchListener listener) {
         this.currentUser = user;
@@ -121,7 +124,6 @@ public class Sidebar extends JPanel {
         });
 
         // Use a glue component to push the button to the bottom
-        add(Box.createVerticalGlue());
         add(logoutButton);
     }
 
@@ -177,7 +179,11 @@ public class Sidebar extends JPanel {
         fetchWorkspaces();
     }
     
-
+    @Override
+    public void onWorkspaceDelete(String workspaceId) {
+        System.out.println("Deleting workspace with ID: " + workspaceId);
+        fetchWorkspaces(); // Refresh the sidebar after deletion
+    }
 
     // Fetch all workspaces for the current user from Firestore
     public void fetchWorkspaces() {

@@ -12,6 +12,7 @@ import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
 import com.smarttodo.workspace.model.Workspace;
 import com.smarttodo.workspace.model.WorkspaceRole;
+import com.smarttodo.workspace.service.WorkspaceService;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
@@ -53,6 +54,9 @@ import java.util.stream.Collectors;
 public class Home extends JFrame {
 
     private User currentUser;
+    public interface OnWorkspaceDeleteListener {
+        void onWorkspaceDelete(String workspaceId);
+    }
 
     public Home(User user) {
         FirebaseConfig.initializeFirebase();
@@ -155,12 +159,32 @@ public class Home extends JFrame {
     
         // Fetch reminders asynchronously
         ReminderService reminderService = new ReminderService(currentUser);
+        WorkspaceService workspaceService = new WorkspaceService();
         List<Reminder> reminders = null;
         try {
-            reminders = reminderService.fetchReminders(); // Fetch reminders
+            // Clear the existing reminders list
+            reminders = reminderService.fetchReminders();
+        
+            // Fetch the list of workspace IDs from currentUser
+            List<String> workspaceIds = currentUser.getWorkspacesId();
+        
+            if (workspaceIds != null && !workspaceIds.isEmpty()) {
+                // Iterate over each workspace ID
+                for (String workspaceId : workspaceIds) {
+                    // Fetch reminders for the current workspace
+                    List<Reminder> workspaceReminders = workspaceService.fetchWorkspaceReminders(workspaceId);
+        
+                    if (workspaceReminders != null) {
+                        reminders.addAll(workspaceReminders); // Add to the main reminders list
+                    }
+                }
+            } else {
+                System.out.println("No workspaces found for the current user.");
+            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+        
 
         System.out.println(reminders);
         // Add reminder buttons (if any reminders exist)
@@ -1083,7 +1107,9 @@ panel.add(Box.createVerticalStrut(20));
                                                                         saveButton.addActionListener(e -> {
                                                                             String newTitle = titleField.getText().trim();
                                                                             String newDescription = descriptionArea.getText().trim();
-                                                                            String newDueDateStr = dueDateField.getText().trim();
+                                                                            
+                                                                            String newDueDateStr = dueDateField.getText().trim(); // Input in "YYYY-MM-DD"
+                                                    
                                                                             String newPriority = ((Priority) priorityCombo.getSelectedItem()).toString();
                                                                             String newStatus = ((Status) statusCombo.getSelectedItem()).name();
                                                                         
@@ -1105,13 +1131,51 @@ panel.add(Box.createVerticalStrut(20));
                                                                         
                                                                                 // If a due date is provided, create a reminder
                                                                                 if (!newDueDateStr.isEmpty()) {
-                                                                                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(newDueDateStr);
-                                                                                    String recurrencePattern = "NONE"; // Adjust as needed
-                                                                                    Reminder reminder = UserService.createReminderInstance(newTask.getTaskID(), recurrencePattern, dueDate, currentUser, newTitle);
-                                                                        
-                                                                                    // Add the reminder to Firestore
-                                                                                    currentUser.addReminder(reminder);
+                                                                                    try {
+                                                                                        // Parse the due date from the input string
+                                                                                        Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(newDueDateStr);
+                                                                                        String recurrencePattern = "NONE"; // Adjust as needed
+
+                                                                                        // Create a Reminder instance
+                                                                                        Reminder reminder = UserService.createReminderInstance(
+                                                                                            newTask.getTaskID(),
+                                                                                            recurrencePattern,
+                                                                                            dueDate,
+                                                                                            currentUser,
+                                                                                            newTitle
+                                                                                        );
+
+                                                                                        // Add the reminder to Firestore using WorkspaceService
+                                                                                        WorkspaceService workspaceService = new WorkspaceService();
+
+                                                                                        // Use workspace ID from the current task or context
+                                                                                        String reminderId = reminder.getReminderID(); // Replace with reminder's unique ID
+
+                                                                                        // Prepare reminder data for Firestore
+                                                                                        Map<String, Object> reminderData = new HashMap<>();
+                                                                                        reminderData.put("taskID", reminder.getTaskID());
+                                                                                        reminderData.put("recurrencePattern", reminder.getRecurrencePattern());
+                                                                                        reminderData.put("dueDate", reminder.getDueDate());
+                                                                                        reminderData.put("createdBy", currentUser.getUserId());
+                                                                                        reminderData.put("title", reminder.getTitle());
+
+                                                                                        // Call the addReminderToWorkspace function
+                                                                                        boolean success = workspaceService.addReminderToWorkspace(workspaceId, reminderId, reminderData);
+
+                                                                                        if (success) {
+                                                                                            System.out.println("Reminder added successfully to workspace: " + workspaceId);
+                                                                                        } else {
+                                                                                            System.out.println("Failed to add reminder to workspace: " + workspaceId);
+                                                                                        }
+
+
+
+                                                                                    } catch (Exception er) {
+                                                                                        er.printStackTrace();
+                                                                                        System.err.println("Error while adding reminder: " + er.getMessage());
+                                                                                    }
                                                                                 }
+
                                                                         
                                                                                 addDialog.dispose();
                                                                                 JOptionPane.showMessageDialog(null, "Task and reminder saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -1269,57 +1333,76 @@ panel.add(Box.createVerticalStrut(20));
                                                             
                                                             
                                                             
-                                                            private static void createTaskTile(Task task, JPanel panel, String userRole) {
-                            JPanel taskTile = new JPanel();
-                            taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
-                            taskTile.setBackground(new Color(45, 45, 45));
-                            taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
-                            taskTile.setMaximumSize(new Dimension(600, 200));
-                        
-                            JLabel titleLabel = new JLabel(task.getTitle());
-                            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-                            titleLabel.setForeground(Color.WHITE);
-                        
-                            JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
-                            descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                            descriptionLabel.setForeground(Color.LIGHT_GRAY);
-                        
-                            JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
-                            dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                            dueDateLabel.setForeground(Color.GRAY);
-                        
-                            JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
-                            priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                            priorityLabel.setForeground(getPriorityColor(task.getPriority()));
-                                                    
-                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-                                                        tagsPanel.setBackground(new Color(45, 45, 45));
-                                                    
-                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
-                                                            for (String tag : task.getTagsname()) {
-                                                                JLabel tagLabel = new JLabel(tag);
-                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-                                                                tagLabel.setForeground(Color.WHITE);
-                                                                tagLabel.setOpaque(true);
-                                                                tagLabel.setBackground(new Color(0, 0, 128));
-                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                                                                tagsPanel.add(tagLabel);
-                                                            }
-                                                        }
-                                                    
-                                                        taskTile.add(titleLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(descriptionLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(dueDateLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(priorityLabel);
-                                                        taskTile.add(Box.createVerticalStrut(5));
-                                                        taskTile.add(tagsPanel);
-                                                    
-                                                        panel.add(taskTile);
-                                                        panel.add(Box.createVerticalStrut(10));
-                                                    }
+                                                                    private static void createTaskTile(Task task, JPanel panel, String userRole) {
+                                                                        JPanel taskTile = new JPanel();
+                                                                        taskTile.setLayout(new BoxLayout(taskTile, BoxLayout.Y_AXIS));
+                                                                        taskTile.setBackground(new Color(45, 45, 45));
+                                                                        taskTile.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                                                                        taskTile.setMaximumSize(new Dimension(600, 200));
+                                                                    
+                                                                        JLabel titleLabel = new JLabel(task.getTitle());
+                                                                        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                                                                        titleLabel.setForeground(Color.WHITE);
+                                                                    
+                                                                        JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + task.getDescription() + "</div></html>");
+                                                                        descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                                                                        descriptionLabel.setForeground(Color.LIGHT_GRAY);
+                                                                    
+                                                                        JLabel dueDateLabel = new JLabel("Due: " + (task.getDueDate() != null ? new SimpleDateFormat("yyyy-MM-dd").format(task.getDueDate()) : "N/A"));
+                                                                        dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                        dueDateLabel.setForeground(Color.GRAY);
+                                                                    
+                                                                        JLabel priorityLabel = new JLabel("Priority: " + task.getPriority());
+                                                                        priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                        priorityLabel.setForeground(getPriorityColor(task.getPriority()));
+                                                                    
+                                                                        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                                                                        tagsPanel.setBackground(new Color(45, 45, 45));
+                                                                    
+                                                                        if (task.getTagsname() != null && !task.getTagsname().isEmpty()) {
+                                                                            for (String tag : task.getTagsname()) {
+                                                                                JLabel tagLabel = new JLabel(tag);
+                                                                                tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                                                                                tagLabel.setForeground(Color.WHITE);
+                                                                                tagLabel.setOpaque(true);
+                                                                                tagLabel.setBackground(new Color(0, 0, 128));
+                                                                                tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                                                                                tagsPanel.add(tagLabel);
+                                                                            }
+                                                                        }
+                                                                    
+                                                                        taskTile.add(titleLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(descriptionLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(dueDateLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(priorityLabel);
+                                                                        taskTile.add(Box.createVerticalStrut(5));
+                                                                        taskTile.add(tagsPanel);
+                                                                    
+                                                                        // Add a MouseListener to make the tile clickable
+                                                                        taskTile.addMouseListener(new MouseAdapter() {
+                                                                            @Override
+                                                                            public void mouseClicked(MouseEvent e) {
+                                                                                openEditDialog(task, taskTile);
+                                                                            }
+                                                                    
+                                                                            @Override
+                                                                            public void mouseEntered(MouseEvent e) {
+                                                                                taskTile.setBackground(new Color(60, 60, 60)); // Highlight effect on hover
+                                                                            }
+                                                                    
+                                                                            @Override
+                                                                            public void mouseExited(MouseEvent e) {
+                                                                                taskTile.setBackground(new Color(45, 45, 45)); // Revert back to original color
+                                                                            }
+                                                                        });
+                                                                    
+                                                                        panel.add(taskTile);
+                                                                        panel.add(Box.createVerticalStrut(10));
+                                                                    }
+                                                                    
                                                     
                                                         
                                                         
@@ -1330,7 +1413,7 @@ panel.add(Box.createVerticalStrut(20));
                                                      * @param task     The task to edit.
                                                      * @param taskTile The JPanel representing the task tile to update after editing.
                                                      */
-                                                    private void openEditDialog(Task task, JPanel taskTile) {
+                                                    static void openEditDialog(Task task, JPanel taskTile) {
                                                         // Create a modal dialog
                                                         JDialog editDialog = new JDialog((Frame) null, "Edit Task", true);
                                                         editDialog.setSize(500, 600);

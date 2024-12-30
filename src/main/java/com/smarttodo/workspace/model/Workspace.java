@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import com.smarttodo.reminder.model.Reminder;
 import com.smarttodo.task.model.Task;
 import com.smarttodo.user.model.User;
 import com.smarttodo.user.service.UserService;
@@ -18,6 +19,7 @@ public class Workspace {
     private Map<User, WorkspaceRole> userRoles;  // Map to store user roles
     private List<Task> tasks;
     private List<String> tags;
+    private List<Reminder> reminders;
 
     // Constructor
     public Workspace(String workspaceID, String name, String description, String ownerId) {
@@ -28,6 +30,7 @@ public class Workspace {
         this.userRoles = new HashMap<>();  // Initialize the userRoles map
         this.tasks = new ArrayList<>();
         this.tags = new ArrayList<>();
+        this.reminders = new ArrayList<>();
     }
 
     // Getters and Setters

@@ -13,7 +13,7 @@ public class FirebaseConfig {
         if (FirebaseApp.getApps().isEmpty()) {
             try {
                 // Đọc file thông tin xác thực từ đường dẫn của bạn
-                FileInputStream serviceAccount = new FileInputStream("src/main/resources/smart-to-do-97045-firebase-adminsdk-bhhg2-c57af36c19.json");
+                FileInputStream serviceAccount = new FileInputStream("src/main/resources/smart-to-do-97045-firebase-adminsdk-bhhg2-9c370e83a4.json");
                 
                 // Sử dụng builder mới từ FirebaseOptions
                 FirebaseOptions options = FirebaseOptions.builder()

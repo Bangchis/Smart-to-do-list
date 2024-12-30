@@ -72,16 +72,6 @@ public class FirebaseAuthentication {
             // Tạo một document mới trong collection "User" với UID làm tên tài liệu
             ApiFuture<WriteResult> future = db.collection("User").document(userRecord.getUid()).set(userDetails);
     
-            // Tạo sub-collection "reminders" cho người dùng mới
-            Map<String, Object> reminderData = new HashMap<>();
-            reminderData.put("reminderID", "sampleReminderID");
-            reminderData.put("taskID", "sampleTaskID");
-            reminderData.put("recurrencePattern", "None");
-            reminderData.put("dueDate", new Date().toString());
-            reminderData.put("user", userRecord.getUid());
-    
-            userDocRef.collection("reminders").document("sampleReminder").set(reminderData);
-    
             // Chờ cho đến khi ghi xong vào Firestore và xử lý kết quả
             WriteResult result = future.get();
             System.out.println("User details added to Firestore successfully at: " + result.getUpdateTime());
