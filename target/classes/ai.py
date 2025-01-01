@@ -177,9 +177,9 @@ def main():
             '"title","priority","tagsname","dueDate", "description". '
             "Dưới đây là lịch sử các task của người dùng; lưu ý kết quả của bạn chỉ cần JSON, "
             "và trong trường tagsname của mỗi phần tử đều có thêm thể loại Personal, "
-            "và các tagsname phải thuộc danh sách sau, và có ít nhất 3 tags mỗi tasktask: " +
+            "và các tagsname phải thuộc danh sách sau, và có ít nhất 3 tags mỗi task: " +
             ", ".join(valid_tags) + ". "
-            "Các tagsname phải được viết bằng tiếng Anh, ngoài ra tôi sẽ cung cấp cho bạn ngày giờ cụ thể hiện tại để bạn đưa ra duedate chính xác hơn: " +
+            "Các tagsname phải được viết bằng tiếng Anh, ngoài ra tôi sẽ cung cấp cho bạn ngày giờ cụ thể hiện tại để bạn đưa ra duedate chính xác hơn, tuy nhiên khi trả ra output thì phần định dạng duedate phải là seconds và nanos : " +
             str(formatted_date) + ". Dưới đây là lịch sử các task của người dùng: "
         )
         prompt = based + "\n" + \

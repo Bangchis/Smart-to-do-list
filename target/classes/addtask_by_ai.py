@@ -97,53 +97,62 @@ def generate_task_from_title(title, formatted_date_time):
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY environment variable is not set")
 
-    # Định nghĩa cấu trúc JSON Schema cho response_format
-    response_format = {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "task_generation",
-            "schema": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string"},
-                    "description": {"type": "string"},
-                    "priority": {"type": "string", "enum": ["High Priority", "Medium Priority", "Low Priority"]},
-                    "tagsname": {
-                        "type": "array",
-                        "items": {
-                            "type": "string",
-                            "enum": [
-                                "Personal", "Work", "Health", "Fitness", "Education", "Finance", "Shopping", "Travel", "Family", "Friends", "Hobbies", "Home", "Project", "Meetings", "Deadlines", "Self-Care", "Entertainment", "Appointments", "Goals", "Chores"
-                            ]
-                        },
-                        "maxItems": 3
-                    },
-                    "dueDate": {
-                        "type": "object",
-                        "properties": {
-                            "seconds": {"type": "integer"},
-                            "nanos": {"type": "integer"}
-                        },
-                        "required": ["seconds", "nanos"]
-                    }
-                },
-                "required": ["title", "description", "priority", "tagsname", "dueDate"],
-                "additionalProperties": False
-            },
-            "strict": True
-        }
-    }
+    # Danh sách các thẻ hợp lệ
+    valid_tags = [
+        "Personal",
+        "Work",
+        "Health",
+        "Fitness",
+        "Education",
+        "Finance",
+        "Shopping",
+        "Travel",
+        "Family",
+        "Friends",
+        "Hobbies",
+        "Home",
+        "Project",
+        "Meetings",
+        "Deadlines",
+        "Self-Care",
+        "Entertainment",
+        "Appointments",
+        "Goals",
+        "Chores"
+    ]
+
+    # Định nghĩa prompt
+    based = f"""Hiện tại tôi đang cần bạn tạo ra một task từ tiêu đề của task trong app smart to do list của chúng tôi. Bây giờ tôi sẽ cung cấp cho bạn tiêu đề cụ thể của task đó và thời gian hiện tại. Việc của bạn là trả về một JSON có dạng như sau:
+
+{{
+  "title": "Study AI for the next exam",
+  "description": "Generated description for task: Study AI for the next exam",
+  "priority": "MEDIUM",
+  "tagsname": ["Project", "Goals"", "Personal"],
+  "dueDate": {{
+    "seconds": 1734800400,
+    "nanos": 0
+  }}
+}}
+
+Bạn hãy suy luận dựa trên tiêu đề và thời gian để điền thông tin vào các trường này. Nếu có những trường không đủ dữ kiện để suy ra, hãy thêm giá trị hợp lý nhất. Lưu ý:
+- Priority chỉ có thể là: \"High Priority\", \"Medium Priority\", hoặc \"Low Priority\".
+- Tagsname chỉ được chứa tối đa 3 thẻ và luôn phải có thẻ \"Personal\". Các thẻ khác phải nằm trong danh sách hợp lệ sau: {', '.join(valid_tags)}.
+
+Tiêu đề: {title}
+Thời gian hiện tại: {formatted_date_time}
+Lưu ý: Chỉ trả về JSON và không giải thích gì thêm.
+"""
 
     # Tạo payload cho API ChatCompletion
     request_body = {
         "model": "gpt-4o-mini",
         "messages": [
             {"role": "system", "content": "You are an assistant that generates tasks based on a given title and current time."},
-            {"role": "user", "content": f"Generate a task based on the title: {title} and current time: {formatted_date_time}."}
+            {"role": "user", "content": based}
         ],
         "temperature": 0.7,
-        "max_tokens": 500,
-        "response_format": response_format
+        "max_tokens": 500
     }
 
     # Gọi lệnh cURL bằng subprocess
