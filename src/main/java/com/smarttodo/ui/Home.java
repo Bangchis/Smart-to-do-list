@@ -758,7 +758,17 @@ panel.add(Box.createVerticalStrut(20));
                                                                 descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
                                                                 descriptionLabel.setForeground(Color.LIGHT_GRAY);
                                                     
-                                                                JLabel dueDateLabel = new JLabel("Due: " + (t.dueDate != null ? t.dueDate : "N/A"));
+                                                                String dueDateStr;
+                                                                if (t.dueDate != null) {
+                                                                    // Chuyển đổi từ giây sang mili giây
+                                                                    Date date = new Date(Long.parseLong(t.dueDate) * 1000L);
+                                                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                                                                    dueDateStr = sdf.format(date);
+                                                                } else {
+                                                                    dueDateStr = "N/A";
+                                                                }
+
+                                                                JLabel dueDateLabel = new JLabel("Due: " + dueDateStr);
                                                                 dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                                                                 dueDateLabel.setForeground(Color.GRAY);
                                                     

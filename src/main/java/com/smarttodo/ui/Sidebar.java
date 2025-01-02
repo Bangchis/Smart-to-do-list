@@ -281,6 +281,7 @@ public class Sidebar extends JPanel implements OnWorkspaceDeleteListener{
     
         if (confirm == JOptionPane.YES_OPTION) {
             try {
+                
     
                 // Redirect to LoginForm
                 SwingUtilities.invokeLater(() -> {
