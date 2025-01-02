@@ -21,9 +21,12 @@ import com.google.cloud.firestore.Firestore;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.UserRecord;
 import com.google.firebase.auth.FirebaseAuthException;
+import com.google.api.client.util.DateTime;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.WriteResult;
 import com.smarttodo.user.service.UserService;
+import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.firebase.FirebaseConfig;
 
 
 public class FirebaseAuthentication {
@@ -69,16 +72,6 @@ public class FirebaseAuthentication {
             // Tạo một document mới trong collection "User" với UID làm tên tài liệu
             ApiFuture<WriteResult> future = db.collection("User").document(userRecord.getUid()).set(userDetails);
     
-            // Tạo sub-collection "reminders" cho người dùng mới
-            Map<String, Object> reminderData = new HashMap<>();
-            reminderData.put("reminderID", "sampleReminderID");
-            reminderData.put("taskID", "sampleTaskID");
-            reminderData.put("recurrencePattern", "None");
-            reminderData.put("dueDate", new Date().toString());
-            reminderData.put("user", userRecord.getUid());
-    
-            userDocRef.collection("reminders").document("sampleReminder").set(reminderData);
-    
             // Chờ cho đến khi ghi xong vào Firestore và xử lý kết quả
             WriteResult result = future.get();
             System.out.println("User details added to Firestore successfully at: " + result.getUpdateTime());
@@ -118,7 +111,19 @@ public class FirebaseAuthentication {
     }
 
     
-
+    public static void logout(String userToken) {
+        try {
+            // Revoke the user's token using Firebase Admin SDK
+            FirebaseAuth.getInstance().revokeRefreshTokens(userToken);
+            System.out.println("User tokens revoked successfully.");
+    
+            // Optional: Clear client-side token or session (if applicable)
+            System.out.println("User session cleared.");
+        } catch (FirebaseAuthException e) {
+            System.out.println("Error revoking user tokens: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
     
 
     // Phương thức xác thực thông tin đăng nhập người dùng với email và password

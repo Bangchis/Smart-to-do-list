@@ -280,7 +280,7 @@ class HomePage extends JFrame {
         addReminderButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new AddReminderPage();
+                // new AddReminderPage();
                 dispose();
             }
         });
@@ -323,72 +323,72 @@ class HomePage extends JFrame {
 }
 
 
-class AddReminderPage extends JFrame {
-    private JTextField taskIDField, recurrencePatternField, dueDateField;
-    private JButton addReminderButton, backButton;
+// class AddReminderPage extends JFrame {
+//     private JTextField taskIDField, recurrencePatternField, dueDateField;
+//     private JButton addReminderButton, backButton;
 
-    public AddReminderPage() {
-        setTitle("Add Reminder");
-        setSize(400, 300);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new GridLayout(4, 2));
+//     public AddReminderPage() {
+//         setTitle("Add Reminder");
+//         setSize(400, 300);
+//         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//         setLayout(new GridLayout(4, 2));
 
-        JLabel taskIDLabel = new JLabel("Task ID:");
-        taskIDField = new JTextField();
+//         JLabel taskIDLabel = new JLabel("Task ID:");
+//         taskIDField = new JTextField();
 
-        JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
-        recurrencePatternField = new JTextField();
+//         JLabel recurrencePatternLabel = new JLabel("Recurrence Pattern:");
+//         recurrencePatternField = new JTextField();
 
-        JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
-        dueDateField = new JTextField();
+//         JLabel dueDateLabel = new JLabel("Due Date (YYYY-MM-DD):");
+//         dueDateField = new JTextField();
 
-        addReminderButton = new JButton("Add Reminder");
-        addReminderButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    String taskID = taskIDField.getText();
-                    String recurrencePattern = recurrencePatternField.getText();
-                    String dueDateStr = dueDateField.getText();
-                    Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
+//         addReminderButton = new JButton("Add Reminder");
+//         addReminderButton.addActionListener(new ActionListener() {
+//             @Override
+//             public void actionPerformed(ActionEvent e) {
+//                 try {
+//                     String taskID = taskIDField.getText();
+//                     String recurrencePattern = recurrencePatternField.getText();
+//                     String dueDateStr = dueDateField.getText();
+//                     Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(dueDateStr);
 
-                    // Gọi phương thức createReminderInstance của User để tạo Reminder instance
-                    Reminder reminder = UserService.createReminderInstance(taskID, recurrencePattern, dueDate);
+//                     // Gọi phương thức createReminderInstance của User để tạo Reminder instance
+//                     Reminder reminder = UserService.createReminderInstance(taskID, recurrencePattern, dueDate);
                     
-                    // Gọi phương thức addReminder của User để lưu Reminder vào Firestore
-                    UserService.getCurrentUser().addReminder(reminder);
-                    JOptionPane.showMessageDialog(null, "Reminder added successfully.");
+//                     // Gọi phương thức addReminder của User để lưu Reminder vào Firestore
+//                     UserService.getCurrentUser().addReminder(reminder);
+//                     JOptionPane.showMessageDialog(null, "Reminder added successfully.");
                     
-                    new HomePage();
-                    dispose();
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(null, "Failed to add reminder: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }
-        });
+//                     new HomePage();
+//                     dispose();
+//                 } catch (Exception ex) {
+//                     JOptionPane.showMessageDialog(null, "Failed to add reminder: " + ex.getMessage());
+//                     ex.printStackTrace();
+//                 }
+//             }
+//         });
 
-        backButton = new JButton("Back");
-        backButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                new HomePage();
-                dispose();
-            }
-        });
+//         backButton = new JButton("Back");
+//         backButton.addActionListener(new ActionListener() {
+//             @Override
+//             public void actionPerformed(ActionEvent e) {
+//                 new HomePage();
+//                 dispose();
+//             }
+//         });
 
-        add(taskIDLabel);
-        add(taskIDField);
-        add(recurrencePatternLabel);
-        add(recurrencePatternField);
-        add(dueDateLabel);
-        add(dueDateField);
-        add(addReminderButton);
-        add(backButton);
+//         add(taskIDLabel);
+//         add(taskIDField);
+//         add(recurrencePatternLabel);
+//         add(recurrencePatternField);
+//         add(dueDateLabel);
+//         add(dueDateField);
+//         add(addReminderButton);
+//         add(backButton);
 
-        setVisible(true);
-    }
-}
+//         setVisible(true);
+//     }
+// }
 
 class ViewAllRemindersPage extends JFrame {
     private JTextArea remindersArea;
@@ -456,9 +456,7 @@ class AddWorkspacePage extends JFrame {
                     String workspaceId = UUID.randomUUID().toString();
                     // Call WorkspaceService to create a new Workspace instance and save to Firestore
                    
-                    Workspace workspace = UserService.createWorkspaceInstance(workspaceId,name, description);
-
-                    
+                    Workspace workspace = Workspace.createWorkspaceInstance(workspaceId,name, description);
                     UserService.getCurrentUser().createnewWorkspace(workspaceId,name,description);
                     UserService.getCurrentUser().addWorkspacesId(workspaceId);
 
@@ -540,5 +538,160 @@ class ViewAllWorkspacesPage extends JFrame {
         add(backButton, BorderLayout.SOUTH);
 
         setVisible(true);
+    }
+}
+
+
+
+
+
+
+
+
+class AIPopupPanel extends JPanel {
+    private JPanel tasksContainer; // Panel chứa danh sách tasks
+
+    public AIPopupPanel() {
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setBackground(new Color(30, 30, 30)); // nền giống workspace
+
+        // Tiêu đề (header)
+        JLabel headerLabel = new JLabel("HERE ARE SUGGESTIONS BASED ON YOUR HABITS", JLabel.CENTER);
+        headerLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        headerLabel.setForeground(Color.WHITE);
+        headerLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        add(headerLabel);
+        add(Box.createVerticalStrut(20));
+
+        // Panel chứa tasks
+        tasksContainer = new JPanel();
+        tasksContainer.setLayout(new BoxLayout(tasksContainer, BoxLayout.Y_AXIS));
+        tasksContainer.setBackground(new Color(30, 30, 30));
+
+        // JScrollPane bọc quanh tasksContainer
+        JScrollPane scrollPane = new JScrollPane(tasksContainer,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        scrollPane.getViewport().setBackground(new Color(30, 30, 30));
+        scrollPane.setBorder(null);
+
+        add(scrollPane);
+        setPreferredSize(new Dimension(300, 400));
+    }
+
+    public boolean loadTasks(List<SuggestedTask> suggestedTasks) {
+        // Xóa các task cũ nếu có
+        tasksContainer.removeAll();
+
+        if (suggestedTasks.isEmpty()) {
+            // Không có tasks -> Hiển thị thông báo
+            JLabel noTasksLabel = new JLabel("No suggestions available.", JLabel.CENTER);
+            noTasksLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            noTasksLabel.setForeground(Color.WHITE);
+            tasksContainer.add(noTasksLabel);
+
+            tasksContainer.revalidate();
+            tasksContainer.repaint();
+            return false; // Không load được task
+        } else {
+            // Hiển thị các tasks dạng panel
+            for (SuggestedTask t : suggestedTasks) {
+                tasksContainer.add(Box.createVerticalStrut(10));
+
+                // Tạo panel cho một task
+                JPanel taskPanel = new JPanel();
+                taskPanel.setLayout(new BoxLayout(taskPanel, BoxLayout.Y_AXIS));
+                taskPanel.setBackground(new Color(45, 45, 45));
+                taskPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), 1));
+                taskPanel.setMaximumSize(new Dimension(600, 200));
+
+                JLabel titleLabel = new JLabel(t.title);
+                titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+                titleLabel.setForeground(Color.WHITE);
+
+                JLabel descriptionLabel = new JLabel("<html><div style='width: 500px;'>" + t.description + "</div></html>");
+                descriptionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                descriptionLabel.setForeground(Color.LIGHT_GRAY);
+
+                JLabel dueDateLabel = new JLabel("Due: " + (t.dueDate != null ? t.dueDate : "N/A"));
+                dueDateLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                dueDateLabel.setForeground(Color.GRAY);
+
+                JLabel priorityLabel = new JLabel("Priority: " + t.priority);
+                priorityLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                priorityLabel.setForeground(getPriorityColor(t.priority));
+
+                JPanel tagsPanel = new JPanel();
+                tagsPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                tagsPanel.setBackground(new Color(45, 45, 45));
+
+                if (t.tagsname != null && !t.tagsname.isEmpty()) {
+                    for (String tag : t.tagsname) {
+                        JLabel tagLabel = new JLabel(tag);
+                        tagLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                        tagLabel.setForeground(Color.WHITE);
+                        tagLabel.setOpaque(true);
+                        tagLabel.setBackground(new Color(0, 0, 128));
+                        tagLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+                        tagsPanel.add(tagLabel);
+                    }
+                } else {
+                    JLabel noTagLabel = new JLabel("No Tags");
+                    noTagLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+                    noTagLabel.setForeground(Color.GRAY);
+                    tagsPanel.add(noTagLabel);
+                }
+
+                // Add components to the task panel
+                taskPanel.add(titleLabel);
+                taskPanel.add(Box.createVerticalStrut(5));
+                taskPanel.add(descriptionLabel);
+                taskPanel.add(Box.createVerticalStrut(5));
+                taskPanel.add(dueDateLabel);
+                taskPanel.add(Box.createVerticalStrut(5));
+                taskPanel.add(priorityLabel);
+                taskPanel.add(Box.createVerticalStrut(5));
+                taskPanel.add(tagsPanel);
+
+                tasksContainer.add(taskPanel);
+            }
+
+            tasksContainer.add(Box.createVerticalStrut(10));
+            tasksContainer.revalidate();
+            tasksContainer.repaint();
+            return true; // Load thành công
+        }
+    }
+
+    private Color getPriorityColor(String priority) {
+        switch (priority.toUpperCase()) {
+            case "HIGH":
+                return Color.RED;
+            case "MEDIUM":
+                return Color.ORANGE;
+            case "LOW":
+                return Color.GREEN;
+            default:
+                return Color.GRAY;
+        }
+    }
+
+    // Lớp chứa dữ liệu cho một suggested task
+    static class SuggestedTask {
+        String title;
+        String description;
+        List<String> tagsname;
+        String priority;
+        String dueDate;
+
+        SuggestedTask(String title, String description, List<String> tagsname, String priority, String dueDate) {
+            this.title = title;
+            this.description = description;
+            this.tagsname = tagsname;
+            this.priority = priority;
+            this.dueDate = dueDate;
+        }
     }
 }

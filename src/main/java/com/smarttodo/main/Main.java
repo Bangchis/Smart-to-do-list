@@ -1,6 +1,11 @@
 package com.smarttodo.main;
 
 import com.smarttodo.firebase.service.FirebaseAuthentication;
+import com.smarttodo.ui.LoginForm;
+
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+
 import com.smarttodo.firebase.FirebaseConfig;
 
 public class Main {
@@ -8,10 +13,11 @@ public class Main {
         // Khởi tạo Firebase
         FirebaseConfig.initializeFirebase();
 
-        // Tạo một người dùng mới
-          // Bước 2: Tạo người dùng mới và lưu vào Firestore
-
-        // Lấy thông tin người dùng bằng ID (dùng UID mà bạn đã có)
-        
+        // Khởi chạy LoginForm
+        SwingUtilities.invokeLater(() -> {
+            LoginForm loginForm = new LoginForm();
+            loginForm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            loginForm.setVisible(true);
+        });
     }
 }
